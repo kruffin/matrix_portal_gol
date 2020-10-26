@@ -26,7 +26,11 @@ displayio.release_displays()
 # This makes the animation run faster with some loss of clarity. More
 # optimizations are probably possible.
 
-def apply_life_rule(old, new):
+def apply_life_rule(old_board, new_board, pal):
+    old = old_board[0]
+    old_occupant = old_board[1]
+    new = new_board[0]
+    new_occupant = new_board[1]
     width = old.width
     height = old.height
     for y in range(height):
@@ -37,16 +41,25 @@ def apply_life_rule(old, new):
         for x in range(width):
             xp1 = (x + 1) % width
             neighbors = (
-                old[xm1 + ym1] + old[xm1 + yyy] + old[xm1 + yp1] +
-                old[x   + ym1] +                  old[x   + yp1] +
-                old[xp1 + ym1] + old[xp1 + yyy] + old[xp1 + yp1])
-            new[x+yyy] = neighbors == 3 or (neighbors == 2 and old[x+yyy])
+                old_occupant[xm1 + ym1] + old_occupant[xm1 + yyy] + old_occupant[xm1 + yp1] +
+                old_occupant[x   + ym1] +                  old_occupant[x   + yp1] +
+                old_occupant[xp1 + ym1] + old_occupant[xp1 + yyy] + old_occupant[xp1 + yp1])
+            new_occupant[x+yyy] = neighbors == 3 or (neighbors == 2 and old_occupant[x+yyy])
+            if new_occupant[x+yyy]:
+                #new[x+yyy] = 1 + int(x / int(width / (len(pal) - 1)))
+                #new[x+yyy] = random.choice(range(1, len(pal)))
+                new[x+yyy] = old[x+yyy] + 1
+                if new[x+yyy] >= len(pal):
+                    new[x+yyy] = len(pal) - 1
+            else:
+                new[x+yyy] = 0
             xm1 = x
 
 # Fill 'fraction' out of all the cells.
 def randomize(output, fraction=0.33):
-    for i in range(output.height * output.width):
-        output[i] = random.random() < fraction
+    for i in range(output[0].height * output[0].width):
+        output[0][i] = random.random() < fraction
+        output[1][i] = output[0][i] == 1
 
 
 # Fill the grid with a tribute to John Conway
@@ -63,12 +76,14 @@ def conway(output):
         b'  + +   ',
         b'  + +   ',
     ]
-    for i in range(output.height * output.width):
-        output[i] = 0
+    for i in range(output[0].height * output[0].width):
+        output[0][i] = 0
+        output[1][i] = False
     for i, si in enumerate(conway_data):
-        y = output.height - len(conway_data) - 2 + i
+        y = output[0].height - len(conway_data) - 2 + i
         for j, cj in enumerate(si):
-            output[(output.width - 8)//2 + j, y] = cj & 1
+            output[0][(output[0].width - 8)//2 + j, y] = cj & 1
+            output[1][(output[0].width - 8)//2 + j + y * output[0].width] = cj & 1 == 1
 
 # bit_depth=1 is used here because we only use primary colors, and it makes
 # the animation run a bit faster because RGBMatrix isn't taking over the CPU
@@ -80,9 +95,9 @@ matrix = rgbmatrix.RGBMatrix(
     clock_pin=board.MTX_CLK, latch_pin=board.MTX_LAT, output_enable_pin=board.MTX_OE)
 display = framebufferio.FramebufferDisplay(matrix, auto_refresh=False)
 SCALE = 1
-b1 = displayio.Bitmap(display.width//SCALE, display.height//SCALE, 2)
-b2 = displayio.Bitmap(display.width//SCALE, display.height//SCALE, 2)
-palette = displayio.Palette(2)
+palette = displayio.Palette(8)
+b1 = displayio.Bitmap(display.width//SCALE, display.height//SCALE, len(palette))
+b2 = displayio.Bitmap(display.width//SCALE, display.height//SCALE, len(palette))
 tg1 = displayio.TileGrid(b1, pixel_shader=palette)
 tg2 = displayio.TileGrid(b2, pixel_shader=palette)
 g1 = displayio.Group(max_size=3, scale=SCALE)
@@ -91,12 +106,19 @@ display.show(g1)
 g2 = displayio.Group(max_size=3, scale=SCALE)
 g2.append(tg2)
 
+board1 = [b1, []]
+board2 = [b2, []]
+for idx in range(b1.width * b1.height):
+    board1[1].append(False)
+    board2[1].append(False)
+
 # First time, show the Conway tribute
-palette[1] = 0xffffff
-conway(b1)
+for idx in range(1, len(palette)):
+    palette[idx] = 0xffffff
+conway(board1)
 display.auto_refresh = True
 time.sleep(3)
-n = 40
+n = 5#40
 
 while True:
     # run 2*n generations.
@@ -105,16 +127,23 @@ while True:
     # two bitmaps, reduces copying data and makes the animation a bit faster
     for _ in range(n):
         display.show(g1)
-        apply_life_rule(b1, b2)
+        apply_life_rule(board1, board2, palette)
         display.show(g2)
-        apply_life_rule(b2, b1)
+        apply_life_rule(board2, board1, palette)
 
     # After 2*n generations, fill the board with random values and
     # start over with a new color.
-    randomize(b1)
+    randomize(board1)
     # Pick a random color out of 6 primary colors or white.
-    palette[1] = (
-        (0x0000ff if random.random() > .33 else 0) |
-        (0x00ff00 if random.random() > .33 else 0) |
-        (0xff0000 if random.random() > .33 else 0)) or 0xffffff
-    n = 200
+    colors = [  0xFF0000, 0x00FF00, 0x0000FF, 0xFF00FF, 0xFFFF00, 0x00FFFF, 0xFFFFFF,
+                0x59981A, 0xDBA40E, 0x21B6A8, 0xA3EBB1, 0x18A558, 0xFF2768, 0xFB6090,
+                0xFFC5D0, 0xAE388B, 0xF1C0B9 ]
+    for idx in range(1, len(palette)):
+        palette[idx] = random.choice(colors)
+        colors.remove(palette[idx])
+        #palette[idx] = ((random.choice(range(100, 250)) << 16) & 0xFF0000) | ((random.choice(range(100, 250)) << 8) & 0x00FF00) | (random.choice(range(100, 250)) & 0x0000FF)
+        #(
+        #    (0x0000ff if random.random() > .33 else 0) |
+        #    (0x00ff00 if random.random() > .33 else 0) |
+        #    (0xff0000 if random.random() > .33 else 0)) or 0xffffff
+    n = 100
