@@ -8,6 +8,8 @@ it has lived.
 
 The original branch has the code with minor changes to work with the Matrix Portal.
 
+I also added an Arduino C version as well that is way faster than the python versions. So much so that I have added a delay.
+
 ## Dependencies
 I think this is the full list.
 

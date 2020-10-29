@@ -1,0 +1,175 @@
+
+#include <Adafruit_Protomatter.h>
+
+#if defined(_VARIANT_MATRIXPORTAL_M4_) // MatrixPortal M4
+  uint8_t rgbPins[]  = {7, 8, 9, 10, 11, 12};
+  uint8_t addrPins[] = {17, 18, 19, 20};
+  uint8_t clockPin   = 14;
+  uint8_t latchPin   = 15;
+  uint8_t oePin      = 16;
+#endif
+
+#define WIDTH 64
+#define HEIGHT 32
+#define NUM_COLORS 8
+
+Adafruit_Protomatter matrix(
+  WIDTH,          // Width of matrix (or matrix chain) in pixels
+  4,           // Bit depth, 1-6
+  1, rgbPins,  // # of matrix chains, array of 6 RGB pins for each
+  4, addrPins, // # of address pins (height is inferred), array of pins
+  clockPin, latchPin, oePin, // Other matrix control pins
+  true);      // No double-buffering here (see "doublebuffer" example)
+
+struct gol_cell {
+  unsigned char value; // 0 is dead and anything else is alive.
+};
+
+struct cell_color {
+  unsigned char red;
+  unsigned char green;
+  unsigned char blue;
+};
+
+gol_cell *board;
+gol_cell *old_board;
+cell_color colors[20] = {
+  {0,   0,    0},
+  {100, 0,    0},
+  {0,   100,  0},
+  {0,   0,    100},
+  {100, 0,    100},
+  {0,   1000, 100},
+  {0,   100,  100},
+  {100, 100,  100},
+  {89,  152,  26},
+  {219, 164,  14},
+  {33,  182,  168},
+  {163, 235,  177},
+  {24,  165,  88},
+  {255, 39,   104},
+  {251, 96,   144},
+  {255, 197,  208},
+  {174, 56,   139},
+  {241, 192,  185},
+  {53,  66,   124},
+  {37,  48,   170}
+};
+cell_color *palette;
+
+void randomize_board(gol_cell *b) {
+  for (int idx = 0; idx < WIDTH*HEIGHT; ++idx) {
+    b[idx].value = random(2);
+  }
+};
+
+void pick_palette_colors(cell_color *pal, cell_color *avail_colors) {
+//  deque<cell_color> to_pick;
+//  for (int idx = 0; idx < 20; ++idx) {
+//    to_pick.push_back(avail_colors[idx]);
+//  }
+//
+//  pal[0] = avail_colors[0];
+//  for (int pi = 1; pi < NUM_COLORS; ++pi) {
+//    int di = random(deque.size())
+//    cell_color c = deque[di];
+//    deque.erase(deque.begin() + di);
+//    pal[pi] = c;
+//  }
+  
+  pal[0] = avail_colors[0];
+  int pick;
+  bool good_pick = false;
+  for (int pi = 1; pi < NUM_COLORS; ++pi) {
+    do {
+      pick = 1 + random(19); // Never pick the zeroth color.
+      good_pick = true;
+
+      for (int pii = 1; pii < pi; ++pii) {
+        cell_color c = pal[pii];
+        cell_color a = avail_colors[pick];
+        if (c.red == a.red && c.green == a.green && c.blue == a.blue) {
+          good_pick = false;
+          break;
+        }
+      }
+    } while(!good_pick);
+
+    pal[pi] = avail_colors[pick];
+  }
+};
+
+void draw_board(gol_cell *b, cell_color *col) {
+  for (int y = 0; y < HEIGHT; ++y) {
+    for (int x = 0; x < WIDTH; ++x) {
+      int idx = x + y * WIDTH;
+      gol_cell cell = b[idx];
+      cell_color c = col[cell.value];
+      matrix.drawPixel(x, y, matrix.color565(c.red, c.green, c.blue));
+    }
+  }
+  matrix.show();
+};
+
+void life(gol_cell *old, gol_cell *b, unsigned char max_val) {
+  for (int y = 0; y < HEIGHT; ++y) {
+    for (int x = 0; x < WIDTH; ++x) {
+      int left = x == 0 ? WIDTH - 1 : x - 1;
+      int right = x == WIDTH - 1 ? 0 : x + 1;
+      int up = y == 0 ? HEIGHT - 1 : y - 1;
+      int down = y == HEIGHT - 1 ? 0 : y + 1;
+
+      // count the live neighbors.
+      unsigned char old_val = old[x + y * WIDTH].value;
+      unsigned char neighbors = (old[left + up * WIDTH].value > 0 ? 1 : 0) + (old[x + up * WIDTH].value > 0 ? 1 : 0) + (old[right + up * WIDTH].value > 0 ? 1 : 0) +
+                                (old[left + y * WIDTH].value > 0 ? 1 : 0) +                                      (old[right + y * WIDTH].value > 0 ? 1 : 0) +
+                                (old[left + down * WIDTH].value > 0 ? 1 : 0) + (old[x + down * WIDTH].value > 0 ? 1 : 0) + (old[right + down * WIDTH].value > 0 ? 1 : 0);
+      if (neighbors == 3 && old_val == 0) {
+        b[x + y * WIDTH].value = 1;
+      } else if ((neighbors == 3 || neighbors == 2) && old_val > 0) {
+        b[x + y * WIDTH].value = old_val == max_val ? old_val : old_val + 1;
+      } else {
+        b[x + y * WIDTH].value = 0;
+      }
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+  
+  // Initialize matrix...
+  ProtomatterStatus status = matrix.begin();
+  Serial.print("Protomatter begin() status: ");
+  Serial.println((int)status);
+  if(status != PROTOMATTER_OK) {
+    // DO NOT CONTINUE if matrix setup encountered an error.
+    for(;;);
+  }
+
+  board = (gol_cell *)malloc(HEIGHT*WIDTH * sizeof(gol_cell));
+  old_board = (gol_cell *)malloc(HEIGHT*WIDTH * sizeof(gol_cell));
+  palette = (cell_color *)malloc(NUM_COLORS * sizeof(cell_color));
+
+  randomSeed(1024);
+  randomize_board(board);
+  pick_palette_colors(palette, colors);
+}
+
+int lc = 100;
+void loop() {
+  gol_cell *tmp = old_board;
+  old_board = board;
+  board = tmp;
+
+  if (lc == 0) {
+    lc = 100;
+    randomize_board(old_board);
+    pick_palette_colors(palette, colors);
+  }
+  
+  draw_board(board, palette);
+  life(old_board, board, NUM_COLORS - 1);
+  lc--;
+  delay(110);
+}
