@@ -196,7 +196,7 @@ void setup() {
   old_board = (gol_cell *)malloc(HEIGHT*WIDTH * sizeof(gol_cell));
   palette = (cell_color *)malloc(NUM_COLORS * sizeof(cell_color));
 
-  randomSeed(a0);
+  randomSeed(analogRead(a0));
   randomize_board(board);
   pick_palette_colors(palette, colors);
 }
