@@ -7,11 +7,20 @@
   uint8_t clockPin   = 14;
   uint8_t latchPin   = 15;
   uint8_t oePin      = 16;
+  uint8_t btnUp      = 2;
+  uint8_t btnDwn     = 3;
+  uint8_t a0         = PIN_A0;
 #endif
 
 #define WIDTH 64
 #define HEIGHT 32
-#define NUM_COLORS 8
+#define MAX_COLORS 20
+#define MIN_COLORS 2
+#define ITERATIONS 400
+#define DELAY_INCREMENT 10
+
+unsigned int DELAY_MS = 90;
+unsigned char NUM_COLORS = 8;
 
 Adafruit_Protomatter matrix(
   WIDTH,          // Width of matrix (or matrix chain) in pixels
@@ -29,6 +38,14 @@ struct cell_color {
   unsigned char red;
   unsigned char green;
   unsigned char blue;
+};
+
+struct btn_state {
+  int state;
+  int lastState;
+  unsigned long lastDebounceTime;
+  unsigned long debounceDelay;
+  uint8_t pin;
 };
 
 gol_cell *board;
@@ -57,9 +74,12 @@ cell_color colors[20] = {
 };
 cell_color *palette;
 
+btn_state buttonUp = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnUp};
+btn_state buttonDown = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnDwn};
+
 void randomize_board(gol_cell *b) {
   for (int idx = 0; idx < WIDTH*HEIGHT; ++idx) {
-    b[idx].value = random(2);
+    b[idx].value = random(3) == 0 ? 1 : 0;
   }
 };
 
@@ -135,6 +155,28 @@ void life(gol_cell *old, gol_cell *b, unsigned char max_val) {
   }
 }
 
+bool is_button_pressed(btn_state *btn) {
+  int s = digitalRead(btn->pin);
+//  Serial.print("pin ");
+//  Serial.print(btn->pin);
+//  Serial.print("button state: ");
+//  Serial.println(s);
+  if (s != btn->lastState) {
+    btn->lastDebounceTime = millis();
+  }
+
+  bool changed = false;
+  if ((millis() - btn->lastDebounceTime) > btn->debounceDelay) {
+    if (s != btn->state) {
+      btn->state = s;
+      changed = true;
+    }
+  }
+  btn->lastState = s;
+
+  return (changed && s == HIGH);
+}
+
 void setup() {
   Serial.begin(9600);
   
@@ -147,23 +189,36 @@ void setup() {
     for(;;);
   }
 
+  pinMode(buttonUp.pin, INPUT_PULLUP);
+  pinMode(buttonDown.pin, INPUT_PULLUP);
+
   board = (gol_cell *)malloc(HEIGHT*WIDTH * sizeof(gol_cell));
   old_board = (gol_cell *)malloc(HEIGHT*WIDTH * sizeof(gol_cell));
   palette = (cell_color *)malloc(NUM_COLORS * sizeof(cell_color));
 
-  randomSeed(1024);
+  randomSeed(a0);
   randomize_board(board);
   pick_palette_colors(palette, colors);
 }
 
-int lc = 100;
+int lc = ITERATIONS;
 void loop() {
   gol_cell *tmp = old_board;
   old_board = board;
   board = tmp;
 
+  if (is_button_pressed(&buttonUp)) {
+//    lc = 0;
+//    NUM_COLORS = NUM_COLORS < MAX_COLORS ? NUM_COLORS + 1 : NUM_COLORS;
+    DELAY_MS += DELAY_INCREMENT;
+  } else if (is_button_pressed(&buttonDown)) {
+//    lc = 0;
+//    NUM_COLORS = NUM_COLORS > MIN_COLORS ? NUM_COLORS - 1 : NUM_COLORS;
+    DELAY_MS = DELAY_MS > 0 ? DELAY_MS - DELAY_INCREMENT : 0;
+  }
+  
   if (lc == 0) {
-    lc = 100;
+    lc = ITERATIONS;
     randomize_board(old_board);
     pick_palette_colors(palette, colors);
   }
@@ -171,5 +226,5 @@ void loop() {
   draw_board(board, palette);
   life(old_board, board, NUM_COLORS - 1);
   lc--;
-  delay(110);
+  delay(DELAY_MS);
 }
