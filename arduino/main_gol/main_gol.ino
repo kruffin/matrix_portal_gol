@@ -215,7 +215,9 @@ void setup() {
 }
 
 int lc = ITERATIONS;
+bool showTime = true;
 bool hasTime = false;
+unsigned int textY = 2;
 unsigned long lastTime;
 unsigned long dt = 0;
 void loop() {
@@ -237,10 +239,12 @@ void loop() {
     lastTime = now;
 
     timeGrabber.runningEpoch += seconds;
-    s = timeGrabber.getTime(timeGrabber.runningEpoch);
+    if (showTime) {
+      s = timeGrabber.getTime(timeGrabber.runningEpoch);
+    }
   }
   
-  if (s.length() != 0) {
+  if (showTime && s.length() != 0) {
     timeText.value = s;
   }
   gol_cell *tmp = old_board;
@@ -261,10 +265,17 @@ void loop() {
     lc = ITERATIONS;
     randomize_board(old_board);
     pick_palette_colors(palette, colors);
+    showTime = !showTime;
+    textY += 2;
+    if (textY >= HEIGHT - Text::textHeight - 2) {
+      textY = 2;
+    }
   }
   
   draw_board(board, palette);
-  timeText.draw(2,2, &matrix);
+  if (showTime) {
+    timeText.draw(2,textY, &matrix);
+  }
   matrix.show();
   life(old_board, board, NUM_COLORS - 1);
   lc--;
