@@ -1,8 +1,13 @@
 
+#define USE_NTP
+
 #include <Adafruit_Protomatter.h>
+
+#ifdef USE_NTP
 #include "text.h"
 #include "ntp.h"
 #include "secrets.h"
+#endif
 
 #if defined(_VARIANT_MATRIXPORTAL_M4_) // MatrixPortal M4
   uint8_t rgbPins[]  = {7, 8, 9, 10, 11, 12};
@@ -79,11 +84,14 @@ cell_color *palette;
 
 btn_state buttonUp = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnUp};
 btn_state buttonDown = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnDwn};
+
+#ifdef USE_NTP
 Text timeText = Text();
 IPAddress ntpIP = IPAddress(129, 6, 15, 28);
 char ssid[] = SECRET_SSID;
 char pass[] = SECRET_PASS;
 Ntp timeGrabber = Ntp(ssid, pass, &ntpIP);
+#endif
 
 void randomize_board(gol_cell *b) {
   for (int idx = 0; idx < WIDTH*HEIGHT; ++idx) {
@@ -196,11 +204,13 @@ void setup() {
     for(;;);
   }
 
+#ifdef USE_NTP
   while (!timeGrabber.init()) {
     Serial.println("Failed to start time grabber.");
     delay(1000);
   }
   timeGrabber.requestNtpPacket();
+#endif
 
   pinMode(buttonUp.pin, INPUT_PULLUP);
   pinMode(buttonDown.pin, INPUT_PULLUP);
@@ -215,12 +225,15 @@ void setup() {
 }
 
 int lc = ITERATIONS;
+#ifdef USE_NTP
 bool showTime = true;
 bool hasTime = false;
 unsigned int textY = 2;
 unsigned long lastTime;
 unsigned long dt = 0;
+#endif
 void loop() {
+#ifdef USE_NTP
   String s;
   if (!hasTime) {
     s = timeGrabber.getNtpResponse();
@@ -247,6 +260,7 @@ void loop() {
   if (showTime && s.length() != 0) {
     timeText.value = s;
   }
+#endif
   gol_cell *tmp = old_board;
   old_board = board;
   board = tmp;
@@ -265,17 +279,21 @@ void loop() {
     lc = ITERATIONS;
     randomize_board(old_board);
     pick_palette_colors(palette, colors);
+#ifdef USE_NTP
     showTime = !showTime;
     textY += 2;
     if (textY >= HEIGHT - Text::textHeight - 2) {
       textY = 2;
     }
+#endif
   }
   
   draw_board(board, palette);
+#ifdef USE_NTP
   if (showTime) {
     timeText.draw(2,textY, &matrix);
   }
+#endif
   matrix.show();
   life(old_board, board, NUM_COLORS - 1);
   lc--;
