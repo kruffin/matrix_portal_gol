@@ -1,5 +1,8 @@
 
 #include <Adafruit_Protomatter.h>
+#include "text.h"
+#include "ntp.h"
+#include "secrets.h"
 
 #if defined(_VARIANT_MATRIXPORTAL_M4_) // MatrixPortal M4
   uint8_t rgbPins[]  = {7, 8, 9, 10, 11, 12};
@@ -76,6 +79,11 @@ cell_color *palette;
 
 btn_state buttonUp = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnUp};
 btn_state buttonDown = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnDwn};
+Text timeText = Text();
+IPAddress ntpIP = IPAddress(129, 6, 15, 28);
+char ssid[] = SECRET_SSID;
+char pass[] = SECRET_PASS;
+Ntp timeGrabber = Ntp(ssid, pass, &ntpIP);
 
 void randomize_board(gol_cell *b) {
   for (int idx = 0; idx < WIDTH*HEIGHT; ++idx) {
@@ -128,7 +136,6 @@ void draw_board(gol_cell *b, cell_color *col) {
       matrix.drawPixel(x, y, matrix.color565(c.red, c.green, c.blue));
     }
   }
-  matrix.show();
 };
 
 void life(gol_cell *old, gol_cell *b, unsigned char max_val) {
@@ -189,6 +196,12 @@ void setup() {
     for(;;);
   }
 
+  while (!timeGrabber.init()) {
+    Serial.println("Failed to start time grabber.");
+    delay(1000);
+  }
+  timeGrabber.requestNtpPacket();
+
   pinMode(buttonUp.pin, INPUT_PULLUP);
   pinMode(buttonDown.pin, INPUT_PULLUP);
 
@@ -202,7 +215,34 @@ void setup() {
 }
 
 int lc = ITERATIONS;
+bool hasTime = false;
+unsigned long lastTime;
+unsigned long dt = 0;
 void loop() {
+  String s;
+  if (!hasTime) {
+    s = timeGrabber.getNtpResponse();
+    if (s.length() != 0) {
+      hasTime = true;
+      lastTime = millis();
+      timeGrabber.disconnect();
+    }
+  } else {
+    // DEBT: This won't work forever since the return from millis() will eventually wrap back to 0. (50 days according
+    // to the arduino.cc millis() documentation).
+    unsigned long now = millis();
+    dt += now - lastTime; // Keep a count of the milliseconds that are building up.
+    unsigned long seconds = dt / 1000;
+    dt -= seconds * 1000; // subtract off any seconds we took
+    lastTime = now;
+
+    timeGrabber.runningEpoch += seconds;
+    s = timeGrabber.getTime(timeGrabber.runningEpoch);
+  }
+  
+  if (s.length() != 0) {
+    timeText.value = s;
+  }
   gol_cell *tmp = old_board;
   old_board = board;
   board = tmp;
@@ -224,6 +264,8 @@ void loop() {
   }
   
   draw_board(board, palette);
+  timeText.draw(2,2, &matrix);
+  matrix.show();
   life(old_board, board, NUM_COLORS - 1);
   lc--;
   delay(DELAY_MS);
