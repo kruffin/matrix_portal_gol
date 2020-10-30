@@ -118,7 +118,7 @@ void pick_palette_colors(cell_color *pal, cell_color *avail_colors) {
   bool good_pick = false;
   for (int pi = 1; pi < NUM_COLORS; ++pi) {
     do {
-      pick = 1 + random(19); // Never pick the zeroth color.
+      pick = 1 + random(MAX_COLORS-1); // Never pick the zeroth color.
       good_pick = true;
 
       for (int pii = 1; pii < pi; ++pii) {
@@ -205,6 +205,9 @@ void setup() {
   }
 
 #ifdef USE_NTP
+  timeText.value = "GETTING TIME";
+  timeText.draw(2,2, &matrix, matrix.color565(255, 0, 0));
+  matrix.show();
   while (!timeGrabber.init()) {
     Serial.println("Failed to start time grabber.");
     delay(1000);
@@ -231,6 +234,7 @@ bool hasTime = false;
 unsigned int textY = 2;
 unsigned long lastTime;
 unsigned long dt = 0;
+cell_color timeColor = colors[1 + random(MAX_COLORS-1)];;
 #endif
 void loop() {
 #ifdef USE_NTP
@@ -285,13 +289,14 @@ void loop() {
     if (textY >= HEIGHT - Text::textHeight - 2) {
       textY = 2;
     }
+    timeColor = colors[1 + random(MAX_COLORS-1)];
 #endif
   }
   
   draw_board(board, palette);
 #ifdef USE_NTP
   if (showTime) {
-    timeText.draw(2,textY, &matrix);
+    timeText.draw(2,textY, &matrix, matrix.color565(timeColor.red, timeColor.green, timeColor.blue));
   }
 #endif
   matrix.show();

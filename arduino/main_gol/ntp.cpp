@@ -103,8 +103,10 @@ String Ntp::getNtpResponse() {
 
 String Ntp::getTime(unsigned long epoch) {
   long hour = (epoch  % 86400L) / 3600 - 4; // minus 4 for EST
-  if (hour < 0) {
+  if (hour <= 0) {
     hour += 12;
+  } else if (hour > 12) {
+    hour -= 12;
   }
   unsigned long minute = (epoch  % 3600) / 60;
   char timeStr[10];
