@@ -246,7 +246,9 @@ void loop() {
       lastTime = millis();
       timeGrabber.disconnect();
     }
-  } else {
+  }
+  
+  if (0 != timeGrabber.runningEpoch) {
     // DEBT: This won't work forever since the return from millis() will eventually wrap back to 0. (50 days according
     // to the arduino.cc millis() documentation).
     unsigned long now = millis();
@@ -284,9 +286,9 @@ void loop() {
     randomize_board(old_board);
     pick_palette_colors(palette, colors);
 #ifdef USE_NTP
-    showTime = !showTime;
+//    showTime = !showTime;
     textY += 2;
-    if (textY >= HEIGHT - Text::textHeight - 2) {
+    if (textY > HEIGHT - Text::textHeight - 1) {
       textY = 2;
     }
     timeColor = colors[1 + random(MAX_COLORS-1)];

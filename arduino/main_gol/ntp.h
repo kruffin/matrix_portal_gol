@@ -19,6 +19,7 @@ public:
 
 private:
   static const int NTP_PACKET_SIZE = 48; // 48 bytes
+  static const int OFFSET_HOURS = -5; // minus 5 for DST in EST
 
   char *wifiSsid;
   char *wifiPass;
