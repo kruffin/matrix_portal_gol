@@ -182,7 +182,9 @@ bool hasTime = false;
 unsigned int textY = 2;
 unsigned long lastTime;
 unsigned long dt = 0;
-cell_color timeColor = colors[1 + random(MAX_COLORS-1)];;
+unsigned long lastTimePulled = millis();
+unsigned long backOffTime = 0;
+cell_color timeColor = colors[1 + random(MAX_COLORS-1)];
 #endif
 void loop() {
 #ifdef USE_NTP
@@ -192,14 +194,32 @@ void loop() {
     if (s.length() != 0) {
       hasTime = true;
       lastTime = millis();
+      lastTimePulled = lastTime;
+      backOffTime = 0;
       timeGrabber.disconnect();
     }
+  }
+
+  unsigned long now = millis();
+  if (!hasTime && (now - lastTimePulled - backOffTime > 30 * 1000)) {
+    // 30 seconds has passed and no ntp response, request it again.
+    timeGrabber.requestNtpPacket();
+    backOffTime += 30 * 1000; // Wait another 30 seconds before requesting again.
+  }
+
+  if (hasTime && (now - lastTimePulled > 4 * 60 * 60 * 1000)) {
+    // 4 hours have passed, attempt to resync with ntp
+    while (!timeGrabber.init()) {
+      Serial.println("Failed to start time grabber.");
+      delay(1000);
+    }
+    timeGrabber.requestNtpPacket();
+    hasTime = false;
   }
   
   if (0 != timeGrabber.runningEpoch) {
     // DEBT: This won't work forever since the return from millis() will eventually wrap back to 0. (50 days according
     // to the arduino.cc millis() documentation).
-    unsigned long now = millis();
     dt += now - lastTime; // Keep a count of the milliseconds that are building up.
     unsigned long seconds = dt / 1000;
     dt -= seconds * 1000; // subtract off any seconds we took

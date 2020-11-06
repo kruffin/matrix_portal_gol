@@ -55,6 +55,7 @@ bool Ntp::init() {
 };
 
 void Ntp::disconnect() {
+  Serial.println("Disconnecting from Wifi.");
   this->udpProto.stop();
   WiFi.end();
 };
@@ -81,6 +82,7 @@ void Ntp::requestNtpPacket() {
 
 String Ntp::getNtpResponse() {
   if (this->udpProto.parsePacket()) {
+    Serial.println("Recieved NTP packet.");
     this->udpProto.read(this->packetBuffer, Ntp::NTP_PACKET_SIZE);
 
     unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
