@@ -7,6 +7,7 @@
 #include "text.h"
 #include "ntp.h"
 #include "secrets.h"
+#include "gol.h"
 #endif
 
 #if defined(_VARIANT_MATRIXPORTAL_M4_) // MatrixPortal M4
@@ -38,15 +39,7 @@ Adafruit_Protomatter matrix(
   clockPin, latchPin, oePin, // Other matrix control pins
   true);      // No double-buffering here (see "doublebuffer" example)
 
-struct gol_cell {
-  unsigned char value; // 0 is dead and anything else is alive.
-};
-
-struct cell_color {
-  unsigned char red;
-  unsigned char green;
-  unsigned char blue;
-};
+Gol game = Gol(WIDTH, HEIGHT);
 
 struct btn_state {
   int state;
@@ -56,8 +49,6 @@ struct btn_state {
   uint8_t pin;
 };
 
-gol_cell *board;
-gol_cell *old_board;
 cell_color colors[20] = {
   {0,   0,    0},
   {100, 0,    0},
@@ -92,12 +83,6 @@ char ssid[] = SECRET_SSID;
 char pass[] = SECRET_PASS;
 Ntp timeGrabber = Ntp(ssid, pass, &ntpIP);
 #endif
-
-void randomize_board(gol_cell *b) {
-  for (int idx = 0; idx < WIDTH*HEIGHT; ++idx) {
-    b[idx].value = random(3) == 0 ? 1 : 0;
-  }
-};
 
 void pick_palette_colors(cell_color *pal, cell_color *avail_colors) {
 //  deque<cell_color> to_pick;
@@ -134,41 +119,6 @@ void pick_palette_colors(cell_color *pal, cell_color *avail_colors) {
     pal[pi] = avail_colors[pick];
   }
 };
-
-void draw_board(gol_cell *b, cell_color *col) {
-  for (int y = 0; y < HEIGHT; ++y) {
-    for (int x = 0; x < WIDTH; ++x) {
-      int idx = x + y * WIDTH;
-      gol_cell cell = b[idx];
-      cell_color c = col[cell.value];
-      matrix.drawPixel(x, y, matrix.color565(c.red, c.green, c.blue));
-    }
-  }
-};
-
-void life(gol_cell *old, gol_cell *b, unsigned char max_val) {
-  for (int y = 0; y < HEIGHT; ++y) {
-    for (int x = 0; x < WIDTH; ++x) {
-      int left = x == 0 ? WIDTH - 1 : x - 1;
-      int right = x == WIDTH - 1 ? 0 : x + 1;
-      int up = y == 0 ? HEIGHT - 1 : y - 1;
-      int down = y == HEIGHT - 1 ? 0 : y + 1;
-
-      // count the live neighbors.
-      unsigned char old_val = old[x + y * WIDTH].value;
-      unsigned char neighbors = (old[left + up * WIDTH].value > 0 ? 1 : 0) + (old[x + up * WIDTH].value > 0 ? 1 : 0) + (old[right + up * WIDTH].value > 0 ? 1 : 0) +
-                                (old[left + y * WIDTH].value > 0 ? 1 : 0) +                                      (old[right + y * WIDTH].value > 0 ? 1 : 0) +
-                                (old[left + down * WIDTH].value > 0 ? 1 : 0) + (old[x + down * WIDTH].value > 0 ? 1 : 0) + (old[right + down * WIDTH].value > 0 ? 1 : 0);
-      if (neighbors == 3 && old_val == 0) {
-        b[x + y * WIDTH].value = 1;
-      } else if ((neighbors == 3 || neighbors == 2) && old_val > 0) {
-        b[x + y * WIDTH].value = old_val == max_val ? old_val : old_val + 1;
-      } else {
-        b[x + y * WIDTH].value = 0;
-      }
-    }
-  }
-}
 
 bool is_button_pressed(btn_state *btn) {
   int s = digitalRead(btn->pin);
@@ -218,12 +168,10 @@ void setup() {
   pinMode(buttonUp.pin, INPUT_PULLUP);
   pinMode(buttonDown.pin, INPUT_PULLUP);
 
-  board = (gol_cell *)malloc(HEIGHT*WIDTH * sizeof(gol_cell));
-  old_board = (gol_cell *)malloc(HEIGHT*WIDTH * sizeof(gol_cell));
   palette = (cell_color *)malloc(NUM_COLORS * sizeof(cell_color));
 
   randomSeed(analogRead(a0));
-  randomize_board(board);
+  game.randomize();
   pick_palette_colors(palette, colors);
 }
 
@@ -267,9 +215,6 @@ void loop() {
     timeText.value = s;
   }
 #endif
-  gol_cell *tmp = old_board;
-  old_board = board;
-  board = tmp;
 
   if (is_button_pressed(&buttonUp)) {
 //    lc = 0;
@@ -283,7 +228,7 @@ void loop() {
   
   if (lc == 0) {
     lc = ITERATIONS;
-    randomize_board(old_board);
+    game.randomize();
     pick_palette_colors(palette, colors);
 #ifdef USE_NTP
 //    showTime = !showTime;
@@ -294,15 +239,15 @@ void loop() {
     timeColor = colors[1 + random(MAX_COLORS-1)];
 #endif
   }
-  
-  draw_board(board, palette);
+
+  game.draw(palette, &matrix);
 #ifdef USE_NTP
   if (showTime) {
     timeText.draw(2,textY, &matrix, matrix.color565(timeColor.red, timeColor.green, timeColor.blue));
   }
 #endif
   matrix.show();
-  life(old_board, board, NUM_COLORS - 1);
+  game.life(NUM_COLORS - 1);
   lc--;
   delay(DELAY_MS);
 }
