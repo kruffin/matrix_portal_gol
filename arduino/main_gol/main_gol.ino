@@ -1,13 +1,13 @@
 
 #define USE_NTP
 
-#include <Adafruit_Protomatter.h>
-
-#ifdef USE_NTP
-#include "text.h"
-#include "ntp.h"
-#include "secrets.h"
+#include "viz.h"
 #include "gol.h"
+#include "boid.h"
+#include "carviz.h"
+#include "rainviz.h"
+#ifdef USE_NTP
+#include "clockviz.h"
 #endif
 
 #if defined(_VARIANT_MATRIXPORTAL_M4_) // MatrixPortal M4
@@ -23,12 +23,10 @@
 
 #define WIDTH 64
 #define HEIGHT 32
-#define MAX_COLORS 20
-#define MIN_COLORS 2
 #define ITERATIONS 400
 #define DELAY_INCREMENT 10
 
-unsigned int DELAY_MS = 90;
+unsigned int DELAY_MS = 10;//80;//90;
 unsigned char NUM_COLORS = 8;
 
 Adafruit_Protomatter matrix(
@@ -39,7 +37,7 @@ Adafruit_Protomatter matrix(
   clockPin, latchPin, oePin, // Other matrix control pins
   true);      // No double-buffering here (see "doublebuffer" example)
 
-Gol game = Gol(WIDTH, HEIGHT);
+Viz *game;
 
 struct btn_state {
   int state;
@@ -49,42 +47,16 @@ struct btn_state {
   uint8_t pin;
 };
 
-cell_color colors[20] = {
-  {0,   0,    0},
-  {100, 0,    0},
-  {0,   100,  0},
-  {0,   0,    100},
-  {100, 0,    100},
-  {0,   1000, 100},
-  {0,   100,  100},
-  {100, 100,  100},
-  {89,  152,  26},
-  {219, 164,  14},
-  {33,  182,  168},
-  {163, 235,  177},
-  {24,  165,  88},
-  {255, 39,   104},
-  {251, 96,   144},
-  {255, 197,  208},
-  {174, 56,   139},
-  {241, 192,  185},
-  {53,  66,   124},
-  {37,  48,   170}
-};
 cell_color *palette;
 
 btn_state buttonUp = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnUp};
 btn_state buttonDown = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnDwn};
 
 #ifdef USE_NTP
-Text timeText = Text();
-IPAddress ntpIP = IPAddress(129, 6, 15, 28);
-char ssid[] = SECRET_SSID;
-char pass[] = SECRET_PASS;
-Ntp timeGrabber = Ntp(ssid, pass, &ntpIP);
+ClockViz clockViz = ClockViz(WIDTH, HEIGHT);
 #endif
 
-void pick_palette_colors(cell_color *pal, cell_color *avail_colors) {
+void pick_palette_colors(cell_color *pal, const cell_color *avail_colors) {
 //  deque<cell_color> to_pick;
 //  for (int idx = 0; idx < 20; ++idx) {
 //    to_pick.push_back(avail_colors[idx]);
@@ -155,14 +127,9 @@ void setup() {
   }
 
 #ifdef USE_NTP
-  timeText.value = "GETTING TIME";
-  timeText.draw(2,2, &matrix, matrix.color565(255, 0, 0));
-  matrix.show();
-  while (!timeGrabber.init()) {
-    Serial.println("Failed to start time grabber.");
-    delay(1000);
-  }
-  timeGrabber.requestNtpPacket();
+  Serial.println("clock viz init()");
+  clockViz.init(&matrix);
+  Serial.println("clock viz init done.");
 #endif
 
   pinMode(buttonUp.pin, INPUT_PULLUP);
@@ -171,69 +138,19 @@ void setup() {
   palette = (cell_color *)malloc(NUM_COLORS * sizeof(cell_color));
 
   randomSeed(analogRead(a0));
-  game.randomize();
-  pick_palette_colors(palette, colors);
+  game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1);
+//  game = new BoidViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+  Serial.println("viz randomize start");
+  game->randomize();
+  Serial.println("viz randomize done.");
+  pick_palette_colors(palette, Colors::get_colors(clockViz.isNight()));
 }
 
-int lc = ITERATIONS;
-#ifdef USE_NTP
-bool showTime = true;
-bool hasTime = false;
-unsigned int textY = 2;
-unsigned long lastTime;
-unsigned long dt = 0;
-unsigned long lastTimePulled = millis();
-unsigned long backOffTime = 0;
-cell_color timeColor = colors[1 + random(MAX_COLORS-1)];
-#endif
+unsigned long loopTime = millis();
+
 void loop() {
 #ifdef USE_NTP
-  String s;
-  if (!hasTime) {
-    s = timeGrabber.getNtpResponse();
-    if (s.length() != 0) {
-      hasTime = true;
-      lastTime = millis();
-      lastTimePulled = lastTime;
-      backOffTime = 0;
-      timeGrabber.disconnect();
-    }
-  }
-
-  unsigned long now = millis();
-  if (!hasTime && (now - lastTimePulled - backOffTime > 30 * 1000)) {
-    // 30 seconds has passed and no ntp response, request it again.
-    timeGrabber.requestNtpPacket();
-    backOffTime += 30 * 1000; // Wait another 30 seconds before requesting again.
-  }
-
-  if (hasTime && (now - lastTimePulled > 4 * 60 * 60 * 1000)) {
-    // 4 hours have passed, attempt to resync with ntp
-    while (!timeGrabber.init()) {
-      Serial.println("Failed to start time grabber.");
-      delay(1000);
-    }
-    timeGrabber.requestNtpPacket();
-    hasTime = false;
-  }
-  
-  if (0 != timeGrabber.runningEpoch) {
-    // DEBT: This won't work forever since the return from millis() will eventually wrap back to 0. (50 days according
-    // to the arduino.cc millis() documentation).
-    dt += now - lastTime; // Keep a count of the milliseconds that are building up.
-    unsigned long seconds = dt / 1000;
-    dt -= seconds * 1000; // subtract off any seconds we took
-    lastTime = now;
-
-    timeGrabber.runningEpoch += seconds;
-    if (showTime) {
-      s = timeGrabber.getTime(timeGrabber.runningEpoch);
-    }
-  }
-  
-  if (showTime && s.length() != 0) {
-    timeText.value = s;
-  }
+  clockViz.update(0);
 #endif
 
   if (is_button_pressed(&buttonUp)) {
@@ -246,28 +163,50 @@ void loop() {
     DELAY_MS = DELAY_MS > 0 ? DELAY_MS - DELAY_INCREMENT : 0;
   }
   
-  if (lc == 0) {
-    lc = ITERATIONS;
-    game.randomize();
-    pick_palette_colors(palette, colors);
+  if (game->isFinished()) {
+    switch (game->getType()) {
+      case TYPE_GOL:
+        delete game;
+        game = new BoidViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+        break;
+      case TYPE_BOID:
+        delete game;
+        game = new CarViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+        break;
+      case TYPE_CAR:
+        delete game;
+        game = new RainViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+        break;
+      case TYPE_RAIN:
+        delete game;
+        if (clockViz.isNight()) {
+          // Skip the GOL since it's too bright at night
+          game = new BoidViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+        } else {
+          game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1);
+        }
+        break;
+      default:
+        delete game;
+        game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1);
+        break;
+    }
+
+    game->randomize();
+    pick_palette_colors(palette, Colors::get_colors(clockViz.isNight()));
 #ifdef USE_NTP
 //    showTime = !showTime;
-    textY += 2;
-    if (textY > HEIGHT - Text::textHeight - 1) {
-      textY = 2;
-    }
-    timeColor = colors[1 + random(MAX_COLORS-1)];
+    clockViz.randomize();
 #endif
   }
 
-  game.draw(palette, &matrix);
+  game->draw(&matrix, palette);
 #ifdef USE_NTP
-  if (showTime) {
-    timeText.draw(2,textY, &matrix, matrix.color565(timeColor.red, timeColor.green, timeColor.blue));
-  }
+  clockViz.draw(&matrix, palette);
 #endif
   matrix.show();
-  game.life(NUM_COLORS - 1);
-  lc--;
+  unsigned long t = millis();
+  game->update(t - loopTime);
+  loopTime = t;
   delay(DELAY_MS);
 }

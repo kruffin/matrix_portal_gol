@@ -115,3 +115,15 @@ String Ntp::getTime(unsigned long epoch) {
   sprintf(timeStr, "%d:%0.2d", hour, minute);
   return String(timeStr);
 };
+
+bool Ntp::isNight() {
+  long hour = (this->runningEpoch  % 86400L) / 3600 + Ntp::OFFSET_HOURS;
+  if (hour < 0) {
+    hour += 24;
+  } else if (hour >= 24) {
+    hour -= 24;
+  }
+  Serial.print("hour: ");
+  Serial.println(hour);
+  return (hour >= 22 || hour <= 7); // between 10pm and 7am
+};

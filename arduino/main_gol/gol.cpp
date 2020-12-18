@@ -2,9 +2,10 @@
 
 #include "gol.h"
 
-Gol::Gol(int width, int height) {
+Gol::Gol(int width, int height, unsigned char max_val) {
   this->width = width;
   this->height = height;
+  this->max_val = max_val;
 
   this->board = (gol_cell *)malloc(this->width * this->height * sizeof(gol_cell));
   this->old_board = (gol_cell *)malloc(this->width * this->height * sizeof(gol_cell));
@@ -15,7 +16,7 @@ Gol::~Gol() {
   delete this->old_board;
 }
 
-void Gol::draw(cell_color *col, Adafruit_Protomatter *matrix) {
+void Gol::draw(Adafruit_Protomatter *matrix, cell_color *col) {
   for (int y = 0; y < this->height; ++y) {
     for (int x = 0; x < this->width; ++x) {
       int idx = x + y * this->width;
@@ -26,7 +27,9 @@ void Gol::draw(cell_color *col, Adafruit_Protomatter *matrix) {
   }
 };
 
-void Gol::life(unsigned char max_val) {
+void Gol::update(unsigned long dt) {
+  this->iterations++;
+  
   for (int y = 0; y < this->height; ++y) {
     for (int x = 0; x < this->width; ++x) {
       int left = x == 0 ? this->width - 1 : x - 1;
@@ -42,7 +45,7 @@ void Gol::life(unsigned char max_val) {
       if (neighbors == 3 && old_val == 0) {
         this->board[x + y * this->width].value = 1;
       } else if ((neighbors == 3 || neighbors == 2) && old_val > 0) {
-        this->board[x + y * this->width].value = old_val == max_val ? old_val : old_val + 1;
+        this->board[x + y * this->width].value = old_val == this->max_val ? old_val : old_val + 1;
       } else {
         this->board[x + y * this->width].value = 0;
       }
@@ -60,10 +63,16 @@ void Gol::swapBuffers() {
 };
 
 void Gol::randomize() {
+  this->iterations = 0;
+  
   for (int idx = 0; idx < this->width * this->height; ++idx) {
     // Stick the random values in old_board since this is where we draw from.
     this->old_board[idx].value = random(3) == 0 ? 1 : 0;
     // Zero out board to prevent old values from messing with the new.
     this->board[idx].value = 0;
   }
+};
+
+bool Gol::isFinished() {
+  return this->iterations >= 400;
 };

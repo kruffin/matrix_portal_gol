@@ -14,6 +14,7 @@ public:
   void requestNtpPacket();
   String getNtpResponse();
   String getTime(unsigned long epoch);
+  bool isNight();
   
   unsigned long runningEpoch;
 
