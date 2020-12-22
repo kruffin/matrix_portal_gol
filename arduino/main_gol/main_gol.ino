@@ -6,6 +6,8 @@
 #include "boid.h"
 #include "carviz.h"
 #include "rainviz.h"
+#include "sprite.h"
+#include "spriteviz.h"
 #ifdef USE_NTP
 #include "clockviz.h"
 #endif
@@ -38,6 +40,14 @@ Adafruit_Protomatter matrix(
   true);      // No double-buffering here (see "doublebuffer" example)
 
 Viz *game;
+cell_color tree_pal[] = {{200, 30, 100}, {0, 150, 0}};
+Sprite tree = Sprite("0020000200022202222200100", 5, 5, (cell_color *)tree_pal, 2);
+Sprite flower = Sprite("010121010", 3, 3, (cell_color *)tree_pal, 2);
+Sprite snowflake = Sprite("0010010101011101010100100", 5, 5, (cell_color *)tree_pal, 2);
+Sprite face = Sprite("0111012021100011020101110", 5, 5, (cell_color *)tree_pal, 2);
+Sprite snowman = Sprite("00200232320232022122222222212202220", 5, 7, (cell_color *)tree_pal, 3);
+Sprite AVAIL_SPRITES[] = { tree, flower, snowflake, face, snowman };
+unsigned char NUM_SPRITES = 5;
 
 struct btn_state {
   int state;
@@ -174,6 +184,10 @@ void loop() {
         game = new CarViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
         break;
       case TYPE_CAR:
+        delete game;
+        game = new SpriteViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1, AVAIL_SPRITES, random(1, NUM_SPRITES+1), 10);
+        break;
+      case TYPE_SPRITE:
         delete game;
         game = new RainViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
         break;

@@ -129,7 +129,7 @@ void CarViz::randomize() {
     this->boidDirections[i].y = this->boidList[i].vy;
 
     // get a random color, don't pick the zeroth color.
-    this->boidList[i].colorIndex = 1 + random(this->maxColorIndex + 1);
+    this->boidList[i].colorIndex = 1 + random(this->maxColorIndex);
 
     this->boidList[i].speed = this->maxBoidSpeed;
   }

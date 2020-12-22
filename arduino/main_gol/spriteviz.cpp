@@ -1,14 +1,16 @@
-#include "rainviz.h"
+#include "spriteviz.h"
 
-RainViz::RainViz(int width, int height, double maxSpeed, unsigned char maxColorIndex) : BoidViz(width, height, maxSpeed, maxColorIndex) {
+SpriteViz::SpriteViz(int width, int height, double maxSpeed, unsigned char maxColorIndex, Sprite *sprites, unsigned char num_sprites, unsigned char min_boids) : BoidViz(width, height, maxSpeed, maxColorIndex) {
+  this->sprites = sprites;
+  this->num_sprites = num_sprites;
+  this->min_boids = min_boids;
+};
+
+SpriteViz::~SpriteViz() {
   
 };
 
-RainViz::~RainViz() {
-  
-};
-
-void RainViz::update(unsigned long dt) {
+void SpriteViz::update(unsigned long dt) {
   this->runTime += dt;
 
   // Update positions and clamp speeds
@@ -42,11 +44,11 @@ void RainViz::update(unsigned long dt) {
   }
 };
 
-void RainViz::randomize() {
+void SpriteViz::randomize() {
   this->runTime = 0;
   
   // randomly pick a number of boids (with at least 5).
-  this->numBoids = random(20, BoidViz::MAX_BOIDS + 1);
+  this->numBoids = random(this->min_boids, BoidViz::MAX_BOIDS + 1);
 
   unsigned char dir = random(2);
   
@@ -72,9 +74,25 @@ void RainViz::randomize() {
         break;
     }
 
+    // pick a random sprite
+    int spriteIdx = random(this->num_sprites);
+    this->boidAttributes[i].sprite_idx = spriteIdx;
     // get a random color, don't pick the zeroth color.
-    this->boidList[i].colorIndex = 1 + random(this->maxColorIndex);
+    this->boidList[i].colorIndex = 1 + random(this->maxColorIndex - this->sprites[spriteIdx].palette_size);
 
     this->boidList[i].speed = this->maxBoidSpeed;
   }
+};
+
+void SpriteViz::draw(Adafruit_Protomatter *matrix, cell_color *col) {
+  matrix->fillScreen(0x0);
+  
+  for (int i = 0; i < this->numBoids; ++i) {
+    boid b = this->boidList[i];
+    int x = int(b.x);
+    int y = int(b.y);
+    if (x >= 0 && x < this->width && y >= 0 && y < this->height) {
+      this->sprites[this->boidAttributes[i].sprite_idx].draw(matrix, col + b.colorIndex, x, y);
+    }
+  };
 };
