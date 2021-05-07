@@ -10,13 +10,14 @@ public:
   ClockViz(int width, int height);
   ~ClockViz();
 
-  void init(Adafruit_Protomatter *matrix);
+  bool init(Adafruit_Protomatter *matrix);
   void update(unsigned long not_used);
   void draw(Adafruit_Protomatter *matrix, cell_color *col);
   void randomize();
   bool isNight() { return this->timeGrabber->isNight(); };
   bool isFinished() { return false; };
   int getType() { return TYPE_CLOCK; };
+  void set_credentials(char *ssid, char *password);
 
 private:
   int width;

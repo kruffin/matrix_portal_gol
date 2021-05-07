@@ -8,6 +8,7 @@
 #include "rainviz.h"
 #include "sprite.h"
 #include "spriteviz.h"
+#include "config.h"
 #ifdef USE_NTP
 #include "clockviz.h"
 #endif
@@ -30,6 +31,11 @@
 
 unsigned int DELAY_MS = 10;//80;//90;
 unsigned char NUM_COLORS = 8;
+int GOL_FPS = 8;
+unsigned long SIM_TIME = 30L * 1000L;
+unsigned long gmt_offset_changed_time = 0L;
+
+#define MAX_SPEED 10
 
 Adafruit_Protomatter matrix(
   WIDTH,          // Width of matrix (or matrix chain) in pixels
@@ -124,6 +130,9 @@ bool is_button_pressed(btn_state *btn) {
   return (changed && s == HIGH);
 }
 
+configuration conf;
+bool is_clock_inited = false;
+
 void setup() {
   Serial.begin(9600);
   
@@ -136,19 +145,33 @@ void setup() {
     for(;;);
   }
 
-#ifdef USE_NTP
-  Serial.println("clock viz init()");
-  clockViz.init(&matrix);
-  Serial.println("clock viz init done.");
-#endif
-
   pinMode(buttonUp.pin, INPUT_PULLUP);
   pinMode(buttonDown.pin, INPUT_PULLUP);
 
   palette = (cell_color *)malloc(NUM_COLORS * sizeof(cell_color));
 
   randomSeed(analogRead(a0));
-  game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1);
+  
+
+#ifdef USE_NTP
+  conf = Config::read_config();
+  Ntp::OFFSET_HOURS = conf.gmtOffset;
+  if (strcmp(conf.wifiName, "") != 0) {
+    clockViz.set_credentials(conf.wifiName, conf.wifiPass);
+  }
+  if (conf.golFps > 0) {
+    GOL_FPS = conf.golFps;
+  }
+  if (conf.simTime > 0) {
+    SIM_TIME = conf.simTime;
+  }
+
+  Serial.println("clock viz init()");
+  is_clock_inited = clockViz.init(&matrix);
+  Serial.println("clock viz init done.");
+#endif
+
+  game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1, GOL_FPS, SIM_TIME);
 //  game = new BoidViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
   Serial.println("viz randomize start");
   game->randomize();
@@ -164,45 +187,52 @@ void loop() {
 #endif
 
   if (is_button_pressed(&buttonUp)) {
-//    lc = 0;
-//    NUM_COLORS = NUM_COLORS < MAX_COLORS ? NUM_COLORS + 1 : NUM_COLORS;
-    DELAY_MS += DELAY_INCREMENT;
+    Ntp::OFFSET_HOURS += 1;
+    if (Ntp::OFFSET_HOURS != conf.gmtOffset) {
+      gmt_offset_changed_time = millis();
+    }
   } else if (is_button_pressed(&buttonDown)) {
-//    lc = 0;
-//    NUM_COLORS = NUM_COLORS > MIN_COLORS ? NUM_COLORS - 1 : NUM_COLORS;
-    DELAY_MS = DELAY_MS > 0 ? DELAY_MS - DELAY_INCREMENT : 0;
+    Ntp::OFFSET_HOURS -= 1;
+    if (Ntp::OFFSET_HOURS != conf.gmtOffset) {
+      gmt_offset_changed_time = millis();
+    }
   }
   
   if (game->isFinished()) {
     switch (game->getType()) {
       case TYPE_GOL:
         delete game;
-        game = new BoidViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+        game = new BoidViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
         break;
       case TYPE_BOID:
         delete game;
-        game = new CarViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+        game = new CarViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
         break;
       case TYPE_CAR:
         delete game;
-        game = new SpriteViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1, AVAIL_SPRITES, random(1, NUM_SPRITES+1), 10);
+        if (clockViz.isNight()) {
+          // Skip the GOL since it's too bright at night
+          game = new RainViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
+        } else {
+          game = new SpriteViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, AVAIL_SPRITES, random(1, NUM_SPRITES+1), 10, SIM_TIME);
+        }
         break;
       case TYPE_SPRITE:
         delete game;
-        game = new RainViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+        game = new RainViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
         break;
       case TYPE_RAIN:
         delete game;
         if (clockViz.isNight()) {
           // Skip the GOL since it's too bright at night
-          game = new BoidViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+          game = new BoidViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
         } else {
-          game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1);
+          game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1, GOL_FPS, SIM_TIME);
         }
         break;
       default:
         delete game;
-        game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1);
+        game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1, GOL_FPS, SIM_TIME);
         break;
     }
 
@@ -222,5 +252,49 @@ void loop() {
   unsigned long t = millis();
   game->update(t - loopTime);
   loopTime = t;
-  delay(DELAY_MS);
+//  delay(DELAY_MS);
+
+#ifdef USE_NTP
+  if (Serial.available() >= sizeof(configuration)) {
+    for(int i = 0; i < sizeof(configuration); i++) {
+      *((char*)&conf + i) = Serial.read();
+    }
+
+    if (strcmp(conf.version, "GOL001") == 0) {
+      Ntp::OFFSET_HOURS = conf.gmtOffset;
+      clockViz.set_credentials(conf.wifiName, conf.wifiPass);
+      if (conf.golFps > 0) {
+        GOL_FPS = conf.golFps;
+        Serial.print("New FPS is: ");
+        Serial.println(conf.golFps);
+      }
+      if (conf.simTime > 0) {
+        SIM_TIME = conf.simTime;
+        Serial.print("New sim time is: ");
+        Serial.println(conf.simTime);
+      }
+      if (Config::write_config(conf)) {
+        Serial.println("New configuration written.");
+      } else {
+        Serial.println("Failed to write the configuration.");
+      }
+    }
+    clockViz.update(0);
+  }
+  if (!is_clock_inited) {
+    is_clock_inited = clockViz.init(&matrix);
+  }
+  if (gmt_offset_changed_time != 0L && millis() - gmt_offset_changed_time > 5000 && conf.gmtOffset != Ntp::OFFSET_HOURS) {
+    // Update the config
+    gmt_offset_changed_time = 0L;
+    conf.gmtOffset = Ntp::OFFSET_HOURS;
+    if (Config::write_config(conf)) {
+      Serial.println("New configuration written.");
+    } else {
+      Serial.println("Failed to write the configuration.");
+    }
+  }
+//  Serial.print("gmt offset: ");
+//  Serial.println((int)conf.gmtOffset);
+#endif
 }

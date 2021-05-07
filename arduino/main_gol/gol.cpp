@@ -2,18 +2,24 @@
 
 #include "gol.h"
 
-Gol::Gol(int width, int height, unsigned char max_val) {
+Gol::Gol(int width, int height, unsigned char max_val, int fps, unsigned long run_time) {
   this->width = width;
   this->height = height;
   this->max_val = max_val;
 
   this->board = (gol_cell *)malloc(this->width * this->height * sizeof(gol_cell));
   this->old_board = (gol_cell *)malloc(this->width * this->height * sizeof(gol_cell));
+  this->old_previous_board = (gol_cell *)malloc(this->width * this->height * sizeof(gol_cell));
+  this->time_elapsed = 0L;
+  this->time_per_iteration = ceil((1.0f / fps) * 1000);
+  this->total_time = 0L;
+  this->sim_time = run_time;
 };
 
 Gol::~Gol() {
   delete this->board;
   delete this->old_board;
+  delete this->old_previous_board;
 }
 
 void Gol::draw(Adafruit_Protomatter *matrix, cell_color *col) {
@@ -28,6 +34,14 @@ void Gol::draw(Adafruit_Protomatter *matrix, cell_color *col) {
 };
 
 void Gol::update(unsigned long dt) {
+  this->time_elapsed += dt;
+  this->total_time += dt;
+  if (this->time_elapsed < this->time_per_iteration) {
+    return;
+  } else {
+    this->time_elapsed -= this->time_per_iteration;
+  }
+  
   this->iterations++;
   
   for (int y = 0; y < this->height; ++y) {
@@ -52,14 +66,30 @@ void Gol::update(unsigned long dt) {
     }
   }
 
+  if (this->isSteadyState()) {
+    this->randomize();
+    return;
+  }
+
   this->swapBuffers();
 };
 
+bool Gol::isSteadyState() {
+  for(int y = 0; y < this->height; ++y) {
+    for(int x = 0; x < this->width; ++x) {
+      if (this->board[x + y * this->width].value != this->old_previous_board[x + y * this->width].value) {
+        return false;
+      }
+    }
+  }
+  return true;
+};
 
 void Gol::swapBuffers() {
-  gol_cell *tmp = this->board;
-  this->board = this->old_board;
-  this->old_board = tmp;
+  gol_cell *tmp = this->old_previous_board;
+  this->old_previous_board = this->old_board;
+  this->old_board = this->board;
+  this->board = tmp;
 };
 
 void Gol::randomize() {
@@ -70,9 +100,11 @@ void Gol::randomize() {
     this->old_board[idx].value = random(3) == 0 ? 1 : 0;
     // Zero out board to prevent old values from messing with the new.
     this->board[idx].value = 0;
+    this->old_previous_board[idx].value = 0;
   }
 };
 
 bool Gol::isFinished() {
-  return this->iterations >= 400;
+  return this->total_time >= this->sim_time;
+  //return this->iterations >= 400;
 };

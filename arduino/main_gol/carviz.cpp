@@ -1,6 +1,6 @@
 #include "carviz.h"
 
-CarViz::CarViz(int width, int height, double maxSpeed, unsigned char maxColorIndex) : BoidViz(width, height, maxSpeed, maxColorIndex) {
+CarViz::CarViz(int width, int height, double maxSpeed, unsigned char maxColorIndex, unsigned long run_time) : BoidViz(width, height, maxSpeed, maxColorIndex, run_time) {
   
 };
 
@@ -70,7 +70,7 @@ void CarViz::randomize() {
   this->runTime = 0;
   
   // randomly pick a number of boids (with at least 5).
-  this->numBoids = random(20, BoidViz::MAX_BOIDS + 1);
+  this->numBoids = random(BoidViz::MAX_BOIDS/2, BoidViz::MAX_BOIDS + 1);
 
   for (int i = 0; i < this->numBoids; ++i) {
     // start them at random positions with random directions.
@@ -131,6 +131,6 @@ void CarViz::randomize() {
     // get a random color, don't pick the zeroth color.
     this->boidList[i].colorIndex = 1 + random(this->maxColorIndex);
 
-    this->boidList[i].speed = this->maxBoidSpeed;
+    this->boidList[i].speed = random(1, this->maxBoidSpeed+1);
   }
 };

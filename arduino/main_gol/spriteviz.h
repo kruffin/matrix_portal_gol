@@ -11,7 +11,7 @@ struct boid_attr {
 
 class SpriteViz : public BoidViz {
 public:
-  SpriteViz(int width, int height, double maxSpeed, unsigned char maxColorIndex, Sprite *sprites, unsigned char num_sprites, unsigned char min_boids);
+  SpriteViz(int width, int height, double maxSpeed, unsigned char maxColorIndex, Sprite *sprites, unsigned char num_sprites, unsigned char min_boids, unsigned long run_time);
   ~SpriteViz();
   
   void update(unsigned long dt);

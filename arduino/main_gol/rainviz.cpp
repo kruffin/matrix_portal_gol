@@ -1,6 +1,6 @@
 #include "rainviz.h"
 
-RainViz::RainViz(int width, int height, double maxSpeed, unsigned char maxColorIndex) : BoidViz(width, height, maxSpeed, maxColorIndex) {
+RainViz::RainViz(int width, int height, double maxSpeed, unsigned char maxColorIndex, unsigned long run_time) : BoidViz(width, height, maxSpeed, maxColorIndex, run_time) {
   
 };
 
@@ -46,7 +46,7 @@ void RainViz::randomize() {
   this->runTime = 0;
   
   // randomly pick a number of boids (with at least 5).
-  this->numBoids = random(20, BoidViz::MAX_BOIDS + 1);
+  this->numBoids = random(BoidViz::MAX_BOIDS/2, BoidViz::MAX_BOIDS + 1);
 
   unsigned char dir = random(2);
   
@@ -75,6 +75,6 @@ void RainViz::randomize() {
     // get a random color, don't pick the zeroth color.
     this->boidList[i].colorIndex = 1 + random(this->maxColorIndex);
 
-    this->boidList[i].speed = this->maxBoidSpeed;
+    this->boidList[i].speed = random(1, this->maxBoidSpeed+1);
   }
 };

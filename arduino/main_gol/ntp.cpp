@@ -1,6 +1,8 @@
 
 #include "ntp.h"
 
+int Ntp::OFFSET_HOURS = -4; // minus 5 for DST in EST
+
 Ntp::Ntp(char *wifiSsid, char *wifiPass, IPAddress *timeServer) {
   this->wifiSsid = wifiSsid;
   this->wifiPass = wifiPass;
@@ -33,16 +35,18 @@ bool Ntp::init() {
   Serial.print(this->wifiPass);
   Serial.println(")");
   int s = WiFi.begin(this->wifiSsid, this->wifiPass);
-  while (s != WL_CONNECTED && tries < 5) {
+  while (s != WL_CONNECTED && tries < Ntp::maxTries) {
     delay(5000);
     s = WiFi.begin(this->wifiSsid, this->wifiPass);
     tries++;
   }
 
-  if (tries >= 5) {
+  if (tries >= Ntp::maxTries) {
     Serial.print("Failed to connect to the wifi network [");
     Serial.print(this->wifiSsid);
-    Serial.println("] after 5 tries.");
+    Serial.print("] after ");
+    Serial.print(Ntp::maxTries);
+    Serial.println(" tries.");
     return false;
   }
 
@@ -105,9 +109,10 @@ String Ntp::getNtpResponse() {
 
 String Ntp::getTime(unsigned long epoch) {
   long hour = (epoch  % 86400L) / 3600 + Ntp::OFFSET_HOURS;
-  if (hour <= 0) {
+  while (hour <= 0) {
     hour += 12;
-  } else if (hour > 12) {
+  } 
+  while (hour > 12) {
     hour -= 12;
   }
   unsigned long minute = (epoch  % 3600) / 60;

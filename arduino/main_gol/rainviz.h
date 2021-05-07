@@ -5,7 +5,7 @@
 
 class RainViz : public BoidViz {
 public:
-  RainViz(int width, int height, double maxSpeed, unsigned char maxColorIndex);
+  RainViz(int width, int height, double maxSpeed, unsigned char maxColorIndex, unsigned long run_time);
   ~RainViz();
   
   void update(unsigned long dt);

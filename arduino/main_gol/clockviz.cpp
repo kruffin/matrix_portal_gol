@@ -29,16 +29,39 @@ ClockViz::~ClockViz() {
   delete this->pass;
 };
 
-void ClockViz::init(Adafruit_Protomatter *matrix) {
+void ClockViz::set_credentials(char *ssid, char *password) {
+  delete this->ssid;
+  delete this->pass;
+
+  if (ssid == NULL) {
+    ssid = SECRET_SSID;
+  }
+
+  if (password == NULL) {
+    password = SECRET_PASS;
+  }
+
+  this->ssid = (char *)malloc((strlen(ssid)+1) * sizeof(char));
+  strcpy(this->ssid, ssid);
+
+  this->pass = (char *)malloc((strlen(password)+1) * sizeof(char));
+  strcpy(this->pass, password);
+
+  this->timeGrabber->wifiSsid = this->ssid;
+  this->timeGrabber->wifiPass = this->pass;
+}
+
+bool ClockViz::init(Adafruit_Protomatter *matrix) {
   this->timeText.value = "GETTING TIME";
   this->timeText.draw(2,2, matrix, matrix->color565(255, 0, 0));
   matrix->show();
-  while (!this->timeGrabber->init()) {
+  if (!this->timeGrabber->init()) {
     Serial.println("Failed to start time grabber.");
-    delay(1000);
+    return false;
   }
   this->timeGrabber->requestNtpPacket();
   this->timeColor = Colors::get_colors(this->isNight())[1 + random(MAX_COLORS-1)];
+  return true;
 };
 
 void ClockViz::draw(Adafruit_Protomatter *matrix, cell_color *col) {

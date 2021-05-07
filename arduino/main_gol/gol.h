@@ -10,7 +10,7 @@ struct gol_cell {
 
 class Gol : public Viz {
 public:
-  Gol(int width, int height, unsigned char max_val);
+  Gol(int width, int height, unsigned char max_val, int fps, unsigned long run_time);
   ~Gol();
 
   // Draws from the old_board buffer; assumes life() has been called prior.
@@ -26,9 +26,15 @@ private:
   int height;
   unsigned char max_val;
   unsigned int iterations;
+  unsigned long time_elapsed;
+  unsigned long total_time;
+  unsigned long sim_time;
+  int time_per_iteration;
   
   gol_cell *board;
   gol_cell *old_board;
+  gol_cell *old_previous_board;
 
   void swapBuffers();
+  bool isSteadyState();
 };

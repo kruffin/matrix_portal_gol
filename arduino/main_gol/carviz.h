@@ -10,7 +10,7 @@ struct boid_dir {
 
 class CarViz : public BoidViz {
 public:
-  CarViz(int width, int height, double maxSpeed, unsigned char maxColorIndex);
+  CarViz(int width, int height, double maxSpeed, unsigned char maxColorIndex, unsigned long run_time);
   ~CarViz();
   
   void update(unsigned long dt);

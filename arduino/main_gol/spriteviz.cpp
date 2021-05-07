@@ -1,6 +1,6 @@
 #include "spriteviz.h"
 
-SpriteViz::SpriteViz(int width, int height, double maxSpeed, unsigned char maxColorIndex, Sprite *sprites, unsigned char num_sprites, unsigned char min_boids) : BoidViz(width, height, maxSpeed, maxColorIndex) {
+SpriteViz::SpriteViz(int width, int height, double maxSpeed, unsigned char maxColorIndex, Sprite *sprites, unsigned char num_sprites, unsigned char min_boids, unsigned long run_time) : BoidViz(width, height, maxSpeed, maxColorIndex, run_time) {
   this->sprites = sprites;
   this->num_sprites = num_sprites;
   this->min_boids = min_boids;
@@ -80,7 +80,7 @@ void SpriteViz::randomize() {
     // get a random color, don't pick the zeroth color.
     this->boidList[i].colorIndex = 1 + random(this->maxColorIndex - this->sprites[spriteIdx].palette_size);
 
-    this->boidList[i].speed = this->maxBoidSpeed;
+    this->boidList[i].speed = random(1, this->maxBoidSpeed+1);
   }
 };
 

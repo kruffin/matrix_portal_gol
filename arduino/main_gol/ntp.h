@@ -18,12 +18,14 @@ public:
   
   unsigned long runningEpoch;
 
-private:
-  static const int NTP_PACKET_SIZE = 48; // 48 bytes
-  static const int OFFSET_HOURS = -5; // minus 5 for DST in EST
-
+  static int OFFSET_HOURS;
   char *wifiSsid;
   char *wifiPass;
+
+  const int maxTries = 1;
+private:
+  static const int NTP_PACKET_SIZE = 48; // 48 bytes
+
   IPAddress *timeServer;
   unsigned int udpRecievePort = 2390;
   byte packetBuffer[NTP_PACKET_SIZE];
