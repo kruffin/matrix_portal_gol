@@ -1,0 +1,3 @@
+
+#define SECRET_SSID "GTvsUGA"
+#define SECRET_PASS "WR89GTFK"
