@@ -1,3 +1,6 @@
+# Code taken from https://github.com/adafruit/Adafruit_Learning_System_Guides/blob/master/CircuitPython_RGBMatrix/life.py
+# Modified from original that has MIT license.
+
 import random
 import time
 
