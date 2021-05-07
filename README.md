@@ -1,6 +1,8 @@
 # Game of Life (GOL) and Other Simulations in a Clock
 
-    TODO: Add picture here.
+![Game of Life Clock](/images/gol_web.jpg)
+![Game of Life Clock Back](/images/back_web.jpg)
+![Game of Life Clock Side](/images/side_web.jpg)
 
 ## What is it?
 This is a cool clock that performs some simple simulations to keep you in a trance while you watch time fly.
@@ -26,7 +28,13 @@ After a while of that and nights where I had to turn it off to sleep, I decided 
 
 Then came the boids. I had a really bad implementation based on a memory of boids from college, but they followed around aggressively and were boidish. Later the description from here (https://people.ece.cornell.edu/land/courses/ece4760/labs/s2021/Boids/Boids.html ) was used for a proper simulation.
 
+![Game of Life Clock - Boids](/images/boids_web.jpg)
+
 After that some questionable things were added :) What I call cars that just travel north/south/east/west starting at a random position and wrap. Rain came next, that comes from northeast or northwest. And finally, the abomination that is "sprite rain" with possibly the worst small images ever created. But was an interesting/easy attempt using palettes and in-code number arrays to represent images.
+
+![Game of Life Clock - Cars](/images/cars_web.jpg)
+![Game of Life Clock - Rain](/images/rain_web.jpg)
+![Game of Life Clock - Sprite Rain](/images/sprite_rain_web.jpg)
 
 ## How do you use it?
 If you just want the CircuitPython GOL then all you need to do is drag the code.py over to the drive and you are good to go.
