@@ -51,7 +51,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 unsigned int DELAY_MS = 10;//80;//90;
 unsigned char NUM_COLORS = 8;
-int GOL_FPS = 8;
+int GOL_FPS = 15;
 unsigned long SIM_TIME = 30L * 1000L;
 unsigned long gmt_offset_changed_time = 0L;
 

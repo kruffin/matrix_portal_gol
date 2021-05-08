@@ -88,19 +88,22 @@ module case_left_cover() {
         
         angle_xlen = 30;
         angle_zlen = 30;
-        rotate([0, 45, 0]) translate([-angle_xlen/2,-0.5,-angle_zlen/2]) cube([angle_xlen,case_cover_ylen+1,angle_zlen]);
+        translate([-0.8,0,0]) rotate([0, 47, 0]) translate([-angle_xlen/2,-0.5,-angle_zlen/2]) cube([angle_xlen,case_cover_ylen+1,angle_zlen]);
         
-        translate([case_cover_xlen,0,0]) rotate([0, 45, 0]) translate([-angle_xlen/2,-0.5,-angle_zlen/2]) cube([angle_xlen,case_cover_ylen+1,angle_zlen]);
+        translate([case_cover_xlen,0,-0.8]) rotate([0, 47, 0]) translate([-angle_xlen/2,-0.5,-angle_zlen/2]) cube([angle_xlen,case_cover_ylen+1,angle_zlen]);
         
         tri_x = 8.45;//5.65;
         tri_z = 8.45;//5.65;
-        translate([tri_x*1.5,edge_xwidth+4,edge_zwidth+3.2]) rotate([0,45,90]) translate([-tri_x/2,0,-tri_z/2]) polyhedron ( points = [[0, -5, tri_z], [0, 5, tri_z], [0, 5, 0], [0, -5, 0], [tri_x, -5, tri_z], [tri_x, 5, tri_z]], 
-    triangles = [[0,3,2], [0,2,1], [3,0,4], [1,2,5], [0,5,4], [0,1,5],  [5,2,4], [4,2,3], ]);
+        //translate([tri_x*1.5,edge_xwidth+4,edge_zwidth+3.2]) rotate([0,45,90]) translate([-tri_x/2,0,-tri_z/2]) polyhedron ( points = [[0, -5, tri_z], [0, 5, tri_z], [0, 5, 0], [0, -5, 0], [tri_x, -5, tri_z], [tri_x, 5, tri_z]], triangles = [[0,3,2], [0,2,1], [3,0,4], [1,2,5], [0,5,4], [0,1,5],  [5,2,4], [4,2,3], ]);
         
-        translate([case_cover_xlen - tri_x*1.5,edge_xwidth+4,edge_zwidth+3.2]) rotate([0,45,90]) translate([-tri_x/2,0,-tri_z/2]) polyhedron ( points = [[0, -5, tri_z], [0, 5, tri_z], [0, 5, 0], [0, -5, 0], [tri_x, -5, tri_z], [tri_x, 5, tri_z]], 
-    triangles = [[0,3,2], [0,2,1], [3,0,4], [1,2,5], [0,5,4], [0,1,5],  [5,2,4], [4,2,3], ]);
+        translate([0,(case_cover_ylen - case_cover_inner_ylen)/2,edge_zwidth]) cube([20,case_cover_inner_ylen,15]);
         
-    };        
+        //translate([case_cover_xlen - tri_x*1.5,edge_xwidth+4,edge_zwidth+3.2]) rotate([0,45,90]) translate([-tri_x/2,0,-tri_z/2]) polyhedron ( points = [[0, -5, tri_z], [0, 5, tri_z], [0, 5, 0], [0, -5, 0], [tri_x, -5, tri_z], [tri_x, 5, tri_z]], triangles = [[0,3,2], [0,2,1], [3,0,4], [1,2,5], [0,5,4], [0,1,5],  [5,2,4], [4,2,3], ]);
+        translate([case_cover_xlen - 20,(case_cover_ylen - case_cover_inner_ylen)/2,edge_zwidth]) cube([20,case_cover_inner_ylen,15]);
+        
+    };
+
+    
 };
 };
 
