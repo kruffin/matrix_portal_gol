@@ -43,9 +43,16 @@ For the Arduino code, you need to do a few things (assuming a Matrix Portal as t
 
 1. Update the ESP32 firmware so Wifi will work.
 2. Get the Arduino IDE.
-3. Add some libraries to the IDE (#TODO#).
-4. Create a secrets.h file with a couple of entries (allows you to default some wifi credentials if you want).
-5. Flash the code.
+3. Add some libraries to the IDE via the Library Manager.
+  * Adafruit Protomatter 1.2.0 - install all dependencies.
+  * WifiNINA - Add Zip from: https://github.com/adafruit/WiFiNINA/archive/master.zip
+4. Add the Adafruit boards via Preferences -> Additional Boards Manager URLs : https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
+  * Reference page for steps: https://learn.adafruit.com/adafruit-matrixportal-m4/arduino-ide-setup
+5. Add the board via the Boards Manager.
+  * Adafruit SAMD Boards - 1.6.7
+  * Arduino SAMD Boards
+6. Create a secrets.h file with a couple of entries (allows you to default some wifi credentials if you want).
+7. Flash the code.
 
 Once it's running. Compile the `create_config.cpp` file in the config folder. Then run it from the commandline and pass it the parameters you want different from defaults; at a minumum the wifi user and pass are needed. After you get those parameters, funnel it to the display through the USB connection.
 
