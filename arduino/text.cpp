@@ -31,7 +31,7 @@ Text::~Text() {
 void Text::draw(int x, int y, Adafruit_Protomatter *matrix, uint16_t textColor, uint16_t bgColor, unsigned int space) {
   for (int i = 0; i < this->value.length(); ++i) {
       unsigned char c = this->value.charAt(i);
-      int fontIdx = c - 48;
+      int fontIdx = c - 46;
       if (fontIdx < 0 || fontIdx > Text::numCharacters - 2) {
         fontIdx = Text::numCharacters - 1; // Pick the empty/space to draw. 
       }
@@ -59,6 +59,22 @@ void Text::draw(int x, int y, Adafruit_Protomatter *matrix, uint16_t textColor, 
 
 
 const bool Text::font[][Text::textHeight * Text::textWidth] = {
+  // .
+  { 0, 0, 0,
+    0, 0, 0,
+    0, 0, 0,
+    0, 0, 0,
+    0, 0, 0,
+    0, 0, 0,
+    0, 1, 0 },
+  // /
+  { 0, 0, 0,
+    0, 0, 0,
+    0, 0, 0,
+    0, 0, 0,
+    0, 0, 0,
+    0, 0, 0,
+    0, 0, 0 },
   // 0
   { 1, 1, 1,
     1, 0, 1,

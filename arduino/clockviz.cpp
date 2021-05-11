@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "clockviz.h"
 #include "secrets.h"
+#include "version.h"
 
 ClockViz::ClockViz(int width, int height, char *ntpIp) {
   this->width = width;
@@ -87,6 +88,8 @@ void ClockViz::set_ntp_ip(char *ntpIp) {
 bool ClockViz::init(Adafruit_Protomatter *matrix) {
   this->timeText.value = "GETTING TIME";
   this->timeText.draw(2,2, matrix, matrix->color565(255, 0, 0));
+  this->timeText.value = VERSION;
+  this->timeText.draw(2,this->height - Text::textHeight - 2, matrix, matrix->color565(0, 255, 0));
   matrix->show();
   if (!this->timeGrabber->init()) {
     Serial.println("Failed to start time grabber.");
