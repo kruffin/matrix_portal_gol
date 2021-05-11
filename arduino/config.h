@@ -21,12 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 struct configuration {
-  char version[7];
+  char version[8];
   int gmtOffset;
   char wifiName[32];
   char wifiPass[32];
   int golFps;
   int simTime;
+  char ntpIp[16];
 };
 
 class Config {

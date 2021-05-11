@@ -24,12 +24,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 
 struct configuration {
-  char version[7];
+  char version[8];
   int gmtOffset;
   char wifiName[32];
   char wifiPass[32];
   int golFps;
   int simTime;
+  char ntpIp[16];
 };
 
 void print_error(std::string prog_name) {
@@ -40,7 +41,8 @@ void print_error(std::string prog_name) {
 			  << "--wifi-ssid SSID\tThe SSID of the wifi network (FAKE)." << std::endl
 			  << "--wifi-pass PASS\tThe password of the wifi network (WILL NEVER WORK)." << std::endl
 			  << "--gol-fps FPS\t\tThe frames per second to run the GOL simulation; must be greater than zero (10)." << std::endl 
-			  << "--sim-time TIME\tThe time each simulation should run for in milliseconds (30 seconds)." << std::endl;
+			  << "--sim-time TIME\tThe time each simulation should run for in milliseconds (30 seconds)." << std::endl
+			  << "--ntp-ip IP\tThe NTP IP to use (129.6.15.28)." << std::endl;
 };
 
 int main(int argc, char * argv[]) {
@@ -51,7 +53,8 @@ int main(int argc, char * argv[]) {
 		"FAKE",
 		"WILL NEVER WORK",
 		10,
-		30*1000
+		30*1000,
+		"129.6.15.28"
 	};
 
 	/* Expecting 5 parameters:
@@ -109,6 +112,14 @@ int main(int argc, char * argv[]) {
 				print_error(argv[0]);
 				return -1;
 			}
+		} else if (arg == "--ntp-ip") {
+			++i;
+			if (i >= argc) {
+				print_error(argv[0]);
+				return -1;
+			}
+			strncpy(conf.ntpIp, argv[i], std::min((unsigned int)strlen(argv[i]) + 1, (unsigned int)15));
+			conf.ntpIp[15] = '\0';
 		}
 	}
 

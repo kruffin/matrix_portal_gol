@@ -89,7 +89,7 @@ btn_state buttonUp = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceD
 btn_state buttonDown = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnDwn};
 
 #ifdef USE_NTP
-ClockViz clockViz = ClockViz(WIDTH, HEIGHT);
+ClockViz clockViz = ClockViz(WIDTH, HEIGHT, NULL);
 #endif
 
 void pick_palette_colors(cell_color *pal, const cell_color *avail_colors) {
@@ -184,6 +184,9 @@ void setup() {
   }
   if (conf.simTime > 0) {
     SIM_TIME = conf.simTime;
+  }
+  if (strcmp(conf.ntpIp, "") != 0) {
+    clockViz.set_ntp_ip(conf.ntpIp);
   }
 
   Serial.println("clock viz init()");
@@ -283,6 +286,7 @@ void loop() {
     if (strcmp(conf.version, "GOL001") == 0) {
       Ntp::OFFSET_HOURS = conf.gmtOffset;
       clockViz.set_credentials(conf.wifiName, conf.wifiPass);
+      clockViz.set_ntp_ip(conf.ntpIp);
       if (conf.golFps > 0) {
         GOL_FPS = conf.golFps;
         Serial.print("New FPS is: ");

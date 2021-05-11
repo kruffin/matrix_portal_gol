@@ -21,11 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "clockviz.h"
 #include "secrets.h"
 
-ClockViz::ClockViz(int width, int height) {
+ClockViz::ClockViz(int width, int height, char *ntpIp) {
   this->width = width;
   this->height = height;
   this->timeText = Text();
-  this->ntpIP = new IPAddress(129, 6, 15, 28);
+  this->ntpIP = new IPAddress();
+  this->set_ntp_ip(ntpIp);
   
   this->ssid = (char *)malloc((strlen(SECRET_SSID)+1) * sizeof(char));
   strcpy(this->ssid, SECRET_SSID);
@@ -70,6 +71,18 @@ void ClockViz::set_credentials(char *ssid, char *password) {
   this->timeGrabber->wifiSsid = this->ssid;
   this->timeGrabber->wifiPass = this->pass;
 }
+
+void ClockViz::set_ntp_ip(char *ntpIp) {
+   if (ntpIp != NULL && !this->ntpIP->fromString(ntpIp)) {
+    Serial.print("Failed to parse NTP IP address [");
+    Serial.print(ntpIp);
+    Serial.println("]. Defaulting to 129.6.15.28");
+    (*this->ntpIP)[0] = 129;
+    (*this->ntpIP)[1] = 6;
+    (*this->ntpIP)[2] = 15;
+    (*this->ntpIP)[3] = 28;
+  }
+};
 
 bool ClockViz::init(Adafruit_Protomatter *matrix) {
   this->timeText.value = "GETTING TIME";

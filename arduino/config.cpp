@@ -75,7 +75,9 @@ configuration Config::read_config() {
       -4,
       "",
       "",
-      10
+      10,
+      30000,
+      "129.6.15.28"
     };
   }
 
@@ -97,7 +99,9 @@ configuration Config::read_config() {
     -4,
     "",
     "",
-    10
+    10,
+    30000,
+    "129.6.15.28"
   };
 };
 

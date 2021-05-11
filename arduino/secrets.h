@@ -1,3 +1,3 @@
 
-#define SECRET_SSID "GTvsUGA"
-#define SECRET_PASS "WR89GTFK"
+#define SECRET_SSID "FAKE"
+#define SECRET_PASS "NOPE"

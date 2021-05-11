@@ -96,7 +96,15 @@ void Ntp::requestNtpPacket() {
   this->packetBuffer[14]  = 49;
   this->packetBuffer[15]  = 52;
 
-  Serial.println("Sending NTP request...");
+  Serial.print("Sending NTP request... [");
+  Serial.print((*this->timeServer)[0]);
+  Serial.print(".");
+  Serial.print((*this->timeServer)[1]);
+  Serial.print(".");
+  Serial.print((*this->timeServer)[2]);
+  Serial.print(".");
+  Serial.print((*this->timeServer)[3]);
+  Serial.println("]");
   this->udpProto.beginPacket(*this->timeServer, 123); //NTP requests are to port 123
   this->udpProto.write(this->packetBuffer, NTP_PACKET_SIZE);
   this->udpProto.endPacket();

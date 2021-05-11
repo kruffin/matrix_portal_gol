@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class ClockViz : public Viz {
 public:
-  ClockViz(int width, int height);
+  ClockViz(int width, int height, char *ntpIp);
   ~ClockViz();
 
   bool init(Adafruit_Protomatter *matrix);
@@ -38,6 +38,7 @@ public:
   bool isFinished() { return false; };
   int getType() { return TYPE_CLOCK; };
   void set_credentials(char *ssid, char *password);
+  void set_ntp_ip(char *ntpIp);
 
 private:
   int width;
