@@ -1,3 +1,4 @@
+#include "utility/wl_definitions.h"
 /**
 GOL Clock - A clock that displays simulations.
 Copyright (C) 2021 Kevin Ruffin
@@ -19,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "ntp.h"
+#include "Adafruit_SleepyDog.h"
+
 
 int Ntp::OFFSET_HOURS = -4; // minus 5 for DST in EST
 
@@ -26,6 +29,7 @@ Ntp::Ntp(char *wifiSsid, char *wifiPass, IPAddress *timeServer) {
   this->wifiSsid = wifiSsid;
   this->wifiPass = wifiPass;
   this->timeServer = timeServer;
+  this->totalFailures = 0;
 };
 
 Ntp::~Ntp() {
@@ -34,39 +38,62 @@ Ntp::~Ntp() {
 
 bool Ntp::init() {
   if (WiFi.status() == WL_NO_MODULE) {
-    Serial.println("No Wifi Module found.");
+    Serial.println("No Wifi Module found.");  
     return false;
   }
 
-  String firmware = WiFi.firmwareVersion();
-  if (firmware < WIFI_FIRMWARE_LATEST_VERSION) {
-    Serial.print("Incorrect firmware, expected: ");
-    Serial.print(WIFI_FIRMWARE_LATEST_VERSION);
-    Serial.print(" but found: ");
-    Serial.println(firmware);
-    return false;
-  }
+  WiFi.noLowPowerMode();
+  if (WiFi.status() != WL_CONNECTED) {
+    if (this->totalFailures >= 5) {
+      Serial.println("Restarting ESP due to too many WiFi connection failures.");
+      int countdownMS = Watchdog.enable(20);
+      return false;
+    }
 
-  unsigned char tries = 0;
-  Serial.print("Attempting to connect to the wifi network...(");
-  Serial.print(this->wifiSsid);
-  Serial.print(", ");
-  Serial.print(this->wifiPass);
-  Serial.println(")");
-  int s = WiFi.begin(this->wifiSsid, this->wifiPass);
-  while (s != WL_CONNECTED && tries < Ntp::maxTries) {
-    delay(5000);
-    s = WiFi.begin(this->wifiSsid, this->wifiPass);
-    tries++;
-  }
+    String firmware = WiFi.firmwareVersion();
+    if (firmware < WIFI_FIRMWARE_LATEST_VERSION) {
+      Serial.print("Incorrect firmware, expected: ");
+      Serial.print(WIFI_FIRMWARE_LATEST_VERSION);
+      Serial.print(" but found: ");
+      Serial.println(firmware);
+      return false;
+    }
 
-  if (tries >= Ntp::maxTries) {
-    Serial.print("Failed to connect to the wifi network [");
+    unsigned char tries = 0;
+    Serial.print("Attempting to connect to the wifi network...(");
     Serial.print(this->wifiSsid);
-    Serial.print("] after ");
-    Serial.print(Ntp::maxTries);
-    Serial.println(" tries.");
-    return false;
+    Serial.print(", ");
+    Serial.print(this->wifiPass);
+    Serial.println(")");
+    int s = WiFi.begin(this->wifiSsid, this->wifiPass);
+    while (s != WL_CONNECTED && tries < Ntp::maxTries) {
+      Serial.print("Wifi connection failed with error code: ");
+      char* codes[10] = { (char*)"WL_IDLE_STATUS",
+          (char*)"WL_NO_SSID_AVAIL",
+          (char*)"WL_SCAN_COMPLETED",
+          (char*)"WL_CONNECTED",
+          (char*)"WL_CONNECT_FAILED",
+          (char*)"WL_CONNECTION_LOST",
+          (char*)"WL_DISCONNECTED",
+          (char*)"WL_AP_LISTENING",
+          (char*)"WL_AP_CONNECTED",
+          (char*)"WL_AP_FAILED"
+      };
+      Serial.println(codes[s]);
+      delay(5000);
+      s = WiFi.begin(this->wifiSsid, this->wifiPass);
+      tries++;
+    }
+
+    if (tries >= Ntp::maxTries) {
+      Serial.print("Failed to connect to the wifi network [");
+      Serial.print(this->wifiSsid);
+      Serial.print("] after ");
+      Serial.print(Ntp::maxTries);
+      Serial.println(" tries.");
+      this->totalFailures++;    
+      return false;
+    }
   }
 
   Serial.println("Starting udp...");
@@ -80,10 +107,16 @@ bool Ntp::init() {
 void Ntp::disconnect() {
   Serial.println("Disconnecting from Wifi.");
   this->udpProto.stop();
-  WiFi.end();
+  //WiFi.disconnect();
+  //WiFi.end();
+  WiFi.lowPowerMode();
 };
 
 void Ntp::requestNtpPacket() {
+  if (WiFi.status() != WL_CONNECTED) {
+    return;
+  }
+
   memset(this->packetBuffer, 0, Ntp::NTP_PACKET_SIZE);
 
   this->packetBuffer[0] = 0b11100011;   // LI, Version, Mode
@@ -112,7 +145,8 @@ void Ntp::requestNtpPacket() {
 };
 
 String Ntp::getNtpResponse() {
-  if (this->udpProto.parsePacket()) {
+  String toRet = "";
+  while (this->udpProto.parsePacket()) {
     Serial.println("Recieved NTP packet.");
     this->udpProto.read(this->packetBuffer, Ntp::NTP_PACKET_SIZE);
 
@@ -127,11 +161,12 @@ String Ntp::getNtpResponse() {
     // subtract seventy years:
     unsigned long epoch = secsSince1900 - seventyYears;
 
-    this->runningEpoch = epoch;
-    return this->getTime(epoch);
-  } else {
-    return "";
+    if (epoch > this->runningEpoch) {
+      this->runningEpoch = epoch;
+      toRet = this->getTime(epoch);
+    }
   }
+  return toRet;
 };
 
 String Ntp::getTime(unsigned long epoch) {

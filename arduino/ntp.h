@@ -50,4 +50,5 @@ private:
   unsigned int udpRecievePort = 2390;
   byte packetBuffer[NTP_PACKET_SIZE];
   WiFiUDP udpProto;
+  unsigned int totalFailures = 0;
 };

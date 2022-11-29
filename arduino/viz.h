@@ -29,6 +29,6 @@ public:
   virtual void update(unsigned long dt) {};
   virtual void draw(Adafruit_Protomatter *matrix, cell_color *col) {};
   virtual void randomize() {};
-  virtual bool isFinished() {};
-  virtual int getType() {};
+  virtual bool isFinished() = 0;
+  virtual int getType() = 0;
 };

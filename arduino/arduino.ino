@@ -85,8 +85,8 @@ struct btn_state {
 
 cell_color *palette;
 
-btn_state buttonUp = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnUp};
-btn_state buttonDown = {.state=0, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnDwn};
+btn_state buttonUp = {.state=HIGH, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnUp};
+btn_state buttonDown = {.state=HIGH, .lastState=HIGH, .lastDebounceTime=0, .debounceDelay=50, .pin=btnDwn};
 
 #ifdef USE_NTP
 ClockViz clockViz = ClockViz(WIDTH, HEIGHT, NULL);
@@ -147,7 +147,7 @@ bool is_button_pressed(btn_state *btn) {
   }
   btn->lastState = s;
 
-  return (changed && s == HIGH);
+  return (changed && (s == HIGH));
 }
 
 configuration conf;
@@ -213,11 +213,17 @@ void loop() {
     Ntp::OFFSET_HOURS += 1;
     if (Ntp::OFFSET_HOURS != conf.gmtOffset) {
       gmt_offset_changed_time = millis();
+      Serial.println("GMT offset changed +1.");
+    } else {
+      gmt_offset_changed_time = 0L;
     }
   } else if (is_button_pressed(&buttonDown)) {
     Ntp::OFFSET_HOURS -= 1;
     if (Ntp::OFFSET_HOURS != conf.gmtOffset) {
       gmt_offset_changed_time = millis();
+      Serial.println("GMT offset changed -1.");
+    } else {
+      gmt_offset_changed_time = 0L;
     }
   }
   
@@ -313,7 +319,7 @@ void loop() {
     gmt_offset_changed_time = 0L;
     conf.gmtOffset = Ntp::OFFSET_HOURS;
     if (Config::write_config(conf)) {
-      Serial.println("New configuration written.");
+      Serial.println("New configuration written due to GMT offset difference.");
     } else {
       Serial.println("Failed to write the configuration.");
     }

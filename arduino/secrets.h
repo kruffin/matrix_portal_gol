@@ -1,3 +1,3 @@
 
-#define SECRET_SSID "FAKE"
-#define SECRET_PASS "NOPE"
+#define SECRET_SSID (char*)"FAKE"
+#define SECRET_PASS (char*)"NOPE"

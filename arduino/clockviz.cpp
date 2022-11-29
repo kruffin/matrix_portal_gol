@@ -142,7 +142,7 @@ void ClockViz::update(unsigned long not_used) {
       delay(1000);
     }
     this->timeGrabber->requestNtpPacket();
-    this->hasTime = false;
+    this->hasTime = false; // Flip has time to false so the NTP response will be read.
   }
   
   if (0 != this->timeGrabber->runningEpoch) {

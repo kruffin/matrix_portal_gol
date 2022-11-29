@@ -44,12 +44,13 @@ For the Arduino code, you need to do a few things (assuming a Matrix Portal as t
 1. Update the ESP32 firmware so Wifi will work.
 2. Get the Arduino IDE.
 3. Add some libraries to the IDE via the Library Manager.
-  * Adafruit Protomatter 1.2.0 - install all dependencies.
+  * Adafruit Protomatter 1.4.1 - install all dependencies.
   * WifiNINA - Add Zip from: https://github.com/adafruit/WiFiNINA/archive/master.zip
+  * Adafruit SleepyDog 1.6.1
 4. Add the Adafruit boards via Preferences -> Additional Boards Manager URLs : https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
   * Reference page for steps: https://learn.adafruit.com/adafruit-matrixportal-m4/arduino-ide-setup
 5. Add the board via the Boards Manager.
-  * Adafruit SAMD Boards - 1.6.7
+  * Adafruit SAMD Boards - 1.7.10
   * Arduino SAMD Boards
 6. Create a secrets.h file with a couple of entries (allows you to default some wifi credentials if you want).
 7. Flash the code.
