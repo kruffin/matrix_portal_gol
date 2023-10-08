@@ -30,6 +30,7 @@ Ntp::Ntp(char *wifiSsid, char *wifiPass, IPAddress *timeServer) {
   this->wifiPass = wifiPass;
   this->timeServer = timeServer;
   this->totalFailures = 0;
+  this->timeClient.setUpdateInterval(1000 * 60 * 30); // 30 minutes.
 };
 
 Ntp::~Ntp() {
@@ -42,7 +43,8 @@ bool Ntp::init() {
     return false;
   }
 
-  WiFi.noLowPowerMode();
+  //WiFi.noLowPowerMode();
+  WiFi.lowPowerMode();
   if (WiFi.status() != WL_CONNECTED) {
     if (this->totalFailures >= 5) {
       Serial.println("Restarting ESP due to too many WiFi connection failures.");
@@ -97,77 +99,84 @@ bool Ntp::init() {
   }
 
   Serial.println("Starting udp...");
-
-  this->udpProto.begin(this->udpRecievePort);
+  timeClient.begin();
+  //this->udpProto.begin(this->udpRecievePort);
   Serial.println("Udp started.");
 
   return true;
 };
 
 void Ntp::disconnect() {
-  Serial.println("Disconnecting from Wifi.");
-  this->udpProto.stop();
-  //WiFi.disconnect();
-  //WiFi.end();
-  WiFi.lowPowerMode();
+  //Serial.println("Disconnectingj from Wifi.");
+  //this->udpProto.stop();
+    ////WiFi.disconnect();
+    ////WiFi.end();
+  //WiFi.lowPowerMode();
 };
 
 void Ntp::requestNtpPacket() {
-  if (WiFi.status() != WL_CONNECTED) {
-    return;
-  }
+  // if (WiFi.status() != WL_CONNECTED) {
+  //   return;
+  // }
 
-  memset(this->packetBuffer, 0, Ntp::NTP_PACKET_SIZE);
+  // this->udpProto.flush(); // Get rid of any UDP packets that may already be there
 
-  this->packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-  this->packetBuffer[1] = 0;     // Stratum, or type of clock
-  this->packetBuffer[2] = 6;     // Polling Interval
-  this->packetBuffer[3] = 0xEC;  // Peer Clock Precision
-  // 8 bytes of zero for Root Delay & Root Dispersion
-  this->packetBuffer[12]  = 49;
-  this->packetBuffer[13]  = 0x4E;
-  this->packetBuffer[14]  = 49;
-  this->packetBuffer[15]  = 52;
+  // memset(this->packetBuffer, 0, Ntp::NTP_PACKET_SIZE);
 
-  Serial.print("Sending NTP request... [");
-  Serial.print((*this->timeServer)[0]);
-  Serial.print(".");
-  Serial.print((*this->timeServer)[1]);
-  Serial.print(".");
-  Serial.print((*this->timeServer)[2]);
-  Serial.print(".");
-  Serial.print((*this->timeServer)[3]);
-  Serial.println("]");
-  this->udpProto.beginPacket(*this->timeServer, 123); //NTP requests are to port 123
-  this->udpProto.write(this->packetBuffer, NTP_PACKET_SIZE);
-  this->udpProto.endPacket();
-  Serial.println("NTP request sent.");
+  // this->packetBuffer[0] = 0b11100011;   // LI, Version, Mode
+  // this->packetBuffer[1] = 0;     // Stratum, or type of clock
+  // this->packetBuffer[2] = 6;     // Polling Interval
+  // this->packetBuffer[3] = 0xEC;  // Peer Clock Precision
+  // // 8 bytes of zero for Root Delay & Root Dispersion
+  // this->packetBuffer[12]  = 49;
+  // this->packetBuffer[13]  = 0x4E;
+  // this->packetBuffer[14]  = 49;
+  // this->packetBuffer[15]  = 52;
+
+  // Serial.print("Sending NTP request... [");
+  // Serial.print((*this->timeServer)[0]);
+  // Serial.print(".");
+  // Serial.print((*this->timeServer)[1]);
+  // Serial.print(".");
+  // Serial.print((*this->timeServer)[2]);
+  // Serial.print(".");
+  // Serial.print((*this->timeServer)[3]);
+  // Serial.println("]");
+  // this->udpProto.beginPacket(*this->timeServer, 123); //NTP requests are to port 123
+  // this->udpProto.write(this->packetBuffer, NTP_PACKET_SIZE);
+  // this->udpProto.endPacket();
+  // Serial.println("NTP request sent.");
 };
 
 String Ntp::getNtpResponse() {
   String toRet = "";
-  while (this->udpProto.parsePacket()) {
-    Serial.println("Recieved NTP packet.");
-    this->udpProto.read(this->packetBuffer, Ntp::NTP_PACKET_SIZE);
+  // while (this->udpProto.parsePacket()) {
+  //   Serial.println("Recieved NTP packet.");
+  //   this->udpProto.read(this->packetBuffer, Ntp::NTP_PACKET_SIZE);
 
-    unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
-    unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
-    // combine the four bytes (two words) into a long integer
-    // this is NTP time (seconds since Jan 1 1900):
-    unsigned long secsSince1900 = highWord << 16 | lowWord;
+  //   unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
+  //   unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
+  //   // combine the four bytes (two words) into a long integer
+  //   // this is NTP time (seconds since Jan 1 1900):
+  //   unsigned long secsSince1900 = highWord << 16 | lowWord;
 
-    // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
-    const unsigned long seventyYears = 2208988800UL;
-    // subtract seventy years:
-    unsigned long epoch = secsSince1900 - seventyYears;
+  //   // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
+  //   const unsigned long seventyYears = 2208988800UL;
+  //   // subtract seventy years:
+  //   unsigned long epoch = secsSince1900 - seventyYears;
 
-    if (epoch > this->runningEpoch) {
-      this->runningEpoch = epoch;
-      toRet = this->getTime(epoch);
-    }
-  }
+  //   if (epoch > this->runningEpoch) {
+  //     this->runningEpoch = epoch;
+  //     toRet = this->getTime(epoch);
+  //   }
+  // }
   return toRet;
 };
+
+void Ntp::update() {
+  timeClient.update();
+  this->runningEpoch = timeClient.getEpochTime();
+}
 
 String Ntp::getTime(unsigned long epoch) {
   long hour = (epoch  % 86400L) / 3600 + Ntp::OFFSET_HOURS;
@@ -190,7 +199,7 @@ bool Ntp::isNight() {
   } else if (hour >= 24) {
     hour -= 24;
   }
-  Serial.print("hour: ");
-  Serial.println(hour);
+  // Serial.print("hour: ");
+  // Serial.println(hour);
   return (hour >= 22 || hour <= 7); // between 10pm and 7am
 };

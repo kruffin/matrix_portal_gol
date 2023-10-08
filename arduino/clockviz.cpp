@@ -95,7 +95,8 @@ bool ClockViz::init(Adafruit_Protomatter *matrix) {
     Serial.println("Failed to start time grabber.");
     return false;
   }
-  this->timeGrabber->requestNtpPacket();
+  //this->timeGrabber->requestNtpPacket();
+  this->timeGrabber->update();
   this->timeColor = Colors::get_colors(this->isNight())[1 + random(MAX_COLORS-1)];
   return true;
 };
@@ -117,46 +118,51 @@ void ClockViz::randomize() {
 
 void ClockViz::update(unsigned long not_used) {
   String s;
-  if (!this->hasTime) {
-    s = this->timeGrabber->getNtpResponse();
-    if (s.length() != 0) {
-      this->hasTime = true;
-      this->lastTime = millis();
-      this->lastTimePulled = lastTime;
-      this->backOffTime = 0;
-      this->timeGrabber->disconnect();
-    }
-  }
+  // if (!this->hasTime) {
+  //   s = this->timeGrabber->getNtpResponse();
+  //   if (s.length() != 0) {
+  //     this->hasTime = true;
+  //     this->lastTime = millis();
+  //     this->lastTimePulled = lastTime;
+  //     this->backOffTime = 0;
+  //     this->timeGrabber->disconnect();
+  //   }
+  // }
 
-  unsigned long now = millis();
-  if (!this->hasTime && (now - this->lastTimePulled - this->backOffTime > 30 * 1000)) {
-    // 30 seconds has passed and no ntp response, request it again.
-    this->timeGrabber->requestNtpPacket();
-    this->backOffTime += 30 * 1000; // Wait another 30 seconds before requesting again.
-  }
+  // unsigned long now = millis();
+  // if (!this->hasTime && (now - this->lastTimePulled - this->backOffTime > 30 * 1000)) {
+  //   // 30 seconds has passed and no ntp response, request it again.
+  //   this->timeGrabber->requestNtpPacket();
+  //   this->backOffTime += 30 * 1000; // Wait another 30 seconds before requesting again.
+  // }
 
-  if (this->hasTime && (now - this->lastTimePulled > 4 * 60 * 60 * 1000)) {
-    // 4 hours have passed, attempt to resync with ntp
-    while (!this->timeGrabber->init()) {
-      Serial.println("Failed to start time grabber.");
-      delay(1000);
-    }
-    this->timeGrabber->requestNtpPacket();
-    this->hasTime = false; // Flip has time to false so the NTP response will be read.
-  }
+  // if (this->hasTime && (now - this->lastTimePulled > 4 * 60 * 60 * 1000)) {
+  //   // 4 hours have passed, attempt to resync with ntp
+  //   while (!this->timeGrabber->init()) {
+  //     Serial.println("Failed to start time grabber.");
+  //     delay(1000);
+  //   }
+  //   this->timeGrabber->requestNtpPacket();
+  //   this->hasTime = false; // Flip has time to false so the NTP response will be read.
+  // }
   
-  if (0 != this->timeGrabber->runningEpoch) {
-    // DEBT: This won't work forever since the return from millis() will eventually wrap back to 0. (50 days according
-    // to the arduino.cc millis() documentation).
-    this->dt += now - this->lastTime; // Keep a count of the milliseconds that are building up.
-    unsigned long seconds = this->dt / 1000;
-    this->dt -= seconds * 1000; // subtract off any seconds we took
-    this->lastTime = now;
+  // if (0 != this->timeGrabber->runningEpoch) {
+  //   // DEBT: This won't work forever since the return from millis() will eventually wrap back to 0. (50 days according
+  //   // to the arduino.cc millis() documentation).
+  //   this->dt += now - this->lastTime; // Keep a count of the milliseconds that are building up.
+  //   unsigned long seconds = this->dt / 1000;
+  //   this->dt -= seconds * 1000; // subtract off any seconds we took
+  //   this->lastTime = now;
 
-    this->timeGrabber->runningEpoch += seconds;
-    if (this->showTime) {
-      s = this->timeGrabber->getTime(this->timeGrabber->runningEpoch);
-    }
+  //   this->timeGrabber->runningEpoch += seconds;
+  //   if (this->showTime) {
+  //     s = this->timeGrabber->getTime(this->timeGrabber->runningEpoch);
+  //   }
+  // }
+
+  this->timeGrabber->update();
+  if (this->showTime) {
+    s = this->timeGrabber->getTime(this->timeGrabber->runningEpoch);
   }
 
   if (s.length() != 0) {

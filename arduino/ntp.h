@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
+#include <NTPClient.h>
 
 class Ntp {
 public:  
@@ -35,6 +36,7 @@ public:
   String getNtpResponse();
   String getTime(unsigned long epoch);
   bool isNight();
+  void update();
   
   unsigned long runningEpoch;
 
@@ -44,11 +46,12 @@ public:
 
   const int maxTries = 1;
 private:
-  static const int NTP_PACKET_SIZE = 48; // 48 bytes
+  //static const int NTP_PACKET_SIZE = 48; // 48 bytes
 
   IPAddress *timeServer;
   unsigned int udpRecievePort = 2390;
   byte packetBuffer[NTP_PACKET_SIZE];
   WiFiUDP udpProto;
   unsigned int totalFailures = 0;
+  NTPClient timeClient = NTPClient(udpProto);
 };
