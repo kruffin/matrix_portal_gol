@@ -47,7 +47,8 @@ For the Arduino code, you need to do a few things (assuming a Matrix Portal as t
   * Adafruit Protomatter 1.4.1 - install all dependencies.
   * WifiNINA - Add Zip from: https://github.com/adafruit/WiFiNINA/archive/master.zip
   * Adafruit SleepyDog 1.6.1
-  * NTPClient 3.2.1 - https://github.com/arduino-libraries/NTPClient
+  * ~~NTPClient 3.2.1 - https://github.com/arduino-libraries/NTPClient~~
+  * Time 1.6.1 - by Michael Margolis
 4. Add the Adafruit boards via Preferences -> Additional Boards Manager URLs : https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
   * Reference page for steps: https://learn.adafruit.com/adafruit-matrixportal-m4/arduino-ide-setup
 5. Add the board via the Boards Manager.

@@ -23,12 +23,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
-#include <NTPClient.h>
+//#include <NTPClient.h>
+#include <TimeLib.h>
 
 class Ntp {
 public:  
   Ntp(char *wifiSsid, char *wifiPass, IPAddress *timeServer);
   ~Ntp();
+
+  static Ntp *instance;
+  static time_t ntpTimeSync(); 
 
   bool init();
   void disconnect();
@@ -45,13 +49,16 @@ public:
   char *wifiPass;
 
   const int maxTries = 1;
+  static const char ntpServerName[];
 private:
-  //static const int NTP_PACKET_SIZE = 48; // 48 bytes
+  static const int NTP_PACKET_SIZE = 48; // 48 bytes
 
   IPAddress *timeServer;
   unsigned int udpRecievePort = 2390;
   byte packetBuffer[NTP_PACKET_SIZE];
   WiFiUDP udpProto;
   unsigned int totalFailures = 0;
-  NTPClient timeClient = NTPClient(udpProto);
+  //NTPClient timeClient = NTPClient(udpProto);
+  time_t getNtpTime();
+  void sendNTPpacket(IPAddress &address);
 };

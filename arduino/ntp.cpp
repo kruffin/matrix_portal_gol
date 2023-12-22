@@ -24,13 +24,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 int Ntp::OFFSET_HOURS = -4; // minus 5 for DST in EST
+const char Ntp::ntpServerName[] = "pool.ntp.org";
+Ntp *Ntp::instance = NULL;
 
 Ntp::Ntp(char *wifiSsid, char *wifiPass, IPAddress *timeServer) {
   this->wifiSsid = wifiSsid;
   this->wifiPass = wifiPass;
   this->timeServer = timeServer;
   this->totalFailures = 0;
-  this->timeClient.setUpdateInterval(1000 * 60 * 30); // 30 minutes.
+  //this->timeClient.setUpdateInterval(1000 * 60 * 30); // 30 minutes.
+  Ntp::instance = this;
 };
 
 Ntp::~Ntp() {
@@ -43,8 +46,8 @@ bool Ntp::init() {
     return false;
   }
 
-  //WiFi.noLowPowerMode();
-  WiFi.lowPowerMode();
+  WiFi.noLowPowerMode();
+  //WiFi.lowPowerMode();
   if (WiFi.status() != WL_CONNECTED) {
     if (this->totalFailures >= 5) {
       Serial.println("Restarting ESP due to too many WiFi connection failures.");
@@ -99,9 +102,13 @@ bool Ntp::init() {
   }
 
   Serial.println("Starting udp...");
-  timeClient.begin();
-  //this->udpProto.begin(this->udpRecievePort);
+  //timeClient.begin();
+  this->udpProto.begin(this->udpRecievePort);
   Serial.println("Udp started.");
+  setSyncProvider(Ntp::ntpTimeSync);
+  setSyncInterval(60 * 30); // 30 minutes
+
+
 
   return true;
 };
@@ -174,8 +181,9 @@ String Ntp::getNtpResponse() {
 };
 
 void Ntp::update() {
-  timeClient.update();
-  this->runningEpoch = timeClient.getEpochTime();
+  //timeClient.update();
+  //this->runningEpoch = timeClient.getEpochTime();
+  this->runningEpoch = now();
 }
 
 String Ntp::getTime(unsigned long epoch) {
@@ -203,3 +211,102 @@ bool Ntp::isNight() {
   // Serial.println(hour);
   return (hour >= 22 || hour <= 7); // between 10pm and 7am
 };
+
+time_t Ntp::ntpTimeSync() {
+  if (Ntp::instance) {
+    return Ntp::instance->getNtpTime();
+  }
+  Serial.print(millis());
+  Serial.println(": No NTP instance set.");
+  return 0;
+}
+
+time_t Ntp::getNtpTime()
+{
+  IPAddress ntpServerIP; // NTP server's ip address
+  IPAddress zeroIp = IPAddress(0, 0, 0, 0);
+  while (udpProto.parsePacket() > 0) ; // discard any previously received packets
+  Serial.print(millis());
+  Serial.println(": Transmit NTP Request");
+  // get a random server from the pool
+  uint32_t beginWait = millis();
+  while (millis() - beginWait < 1000 * 20) { // 20 seconds
+    int s = WiFi.status();
+    if (s != WL_CONNECTED) {
+      char* codes[10] = { 
+        (char*)"WL_IDLE_STATUS",
+        (char*)"WL_NO_SSID_AVAIL",
+        (char*)"WL_SCAN_COMPLETED",
+        (char*)"WL_CONNECTED",
+        (char*)"WL_CONNECT_FAILED",
+        (char*)"WL_CONNECTION_LOST",
+        (char*)"WL_DISCONNECTED",
+        (char*)"WL_AP_LISTENING",
+        (char*)"WL_AP_CONNECTED",
+        (char*)"WL_AP_FAILED"
+      };
+      Serial.print("Wifi status: ");
+      Serial.println(codes[s]);
+
+      this->udpProto.stop();
+      this->init();
+    }
+    
+    Serial.print(millis());
+    Serial.println(": Looking up NTP server IP.");
+    WiFi.hostByName(ntpServerName, ntpServerIP);
+    if (ntpServerIP != zeroIp) { 
+      break; 
+    }
+    
+    
+  }
+  Serial.print(millis());
+  Serial.print(": ");
+  Serial.print(ntpServerName);
+  Serial.print(": ");
+  Serial.println(ntpServerIP);
+  this->sendNTPpacket(ntpServerIP);
+  beginWait = millis();
+  while (millis() - beginWait < 1500) {
+    int size = udpProto.parsePacket();
+    if (size >= NTP_PACKET_SIZE) {
+      Serial.print(millis());
+      Serial.println(": Receive NTP Response");
+      udpProto.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
+      unsigned long secsSince1900;
+      // convert four bytes starting at location 40 to a long integer
+      secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
+      secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
+      secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
+      secsSince1900 |= (unsigned long)packetBuffer[43];
+      return secsSince1900 - 2208988800UL;// + timeZone * SECS_PER_HOUR;
+    }
+  }
+  Serial.print(millis());
+  Serial.println(": No NTP Response :-(");
+  return 0; // return 0 if unable to get the time
+}
+
+// send an NTP request to the time server at the given address
+void Ntp::sendNTPpacket(IPAddress &address)
+{
+  // set all bytes in the buffer to 0
+  memset(packetBuffer, 0, NTP_PACKET_SIZE);
+  // Initialize values needed to form NTP request
+  // (see URL above for details on the packets)
+  packetBuffer[0] = 0b11100011;   // LI, Version, Mode
+  packetBuffer[1] = 0;     // Stratum, or type of clock
+  packetBuffer[2] = 6;     // Polling Interval
+  packetBuffer[3] = 0xEC;  // Peer Clock Precision
+  // 8 bytes of zero for Root Delay & Root Dispersion
+  packetBuffer[12] = 49;
+  packetBuffer[13] = 0x4E;
+  packetBuffer[14] = 49;
+  packetBuffer[15] = 52;
+  // all NTP fields have been given values, now
+  // you can send a packet requesting a timestamp:
+  udpProto.beginPacket(address, 123); //NTP requests are to port 123
+  udpProto.write(packetBuffer, NTP_PACKET_SIZE);
+  udpProto.endPacket();
+}
