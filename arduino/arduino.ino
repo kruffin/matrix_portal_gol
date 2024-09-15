@@ -319,7 +319,8 @@ void loop() {
     gmt_offset_changed_time = 0L;
     conf.gmtOffset = Ntp::OFFSET_HOURS;
     if (Config::write_config(conf)) {
-      Serial.println("New configuration written due to GMT offset difference.");
+      Serial.print("New configuration written due to GMT offset difference. New offset is: ");
+      Serial.println(conf.gmtOffset);
     } else {
       Serial.println("Failed to write the configuration.");
     }

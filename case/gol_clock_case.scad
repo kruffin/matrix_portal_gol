@@ -77,9 +77,15 @@ module case_left_cover() {
     difference() {
         union() {
             cube([case_cover_xlen, case_cover_ylen, case_cover_zlen]);
-            translate([edge_xwidth + board_hole_mount_radius, edge_xwidth + board_hole_mount_radius, case_cover_zlen-0.1]) cylinder(h=board_hole_zlen+5, r=board_hole_mount_radius-0.15);
+            translate([edge_xwidth + board_hole_mount_radius, edge_xwidth + board_hole_mount_radius, case_cover_zlen-0.1]) cylinder(h=board_hole_zlen+3, r=board_hole_mount_radius-0.15);
+            
+            translate([edge_xwidth + board_hole_mount_radius, edge_xwidth + board_hole_mount_radius, case_cover_zlen+board_hole_zlen*1.7-2.0]) cylinder(h=board_hole_zlen/2.0, r1=board_hole_mount_radius-0.05, r2=board_hole_mount_radius-0.15);
+            translate([edge_xwidth + board_hole_mount_radius, edge_xwidth + board_hole_mount_radius, case_cover_zlen+board_hole_zlen*1.2-2.0]) cylinder(h=board_hole_zlen/2.0, r2=board_hole_mount_radius-0.05, r1=board_hole_mount_radius-0.15);
     
-            translate([case_cover_xlen - edge_xwidth - board_hole_mount_radius, edge_xwidth + board_hole_mount_radius, case_cover_zlen-0.1]) cylinder(h=board_hole_zlen+5, r=board_hole_mount_radius-0.15);
+            translate([case_cover_xlen - edge_xwidth - board_hole_mount_radius, edge_xwidth + board_hole_mount_radius, case_cover_zlen-0.1]) cylinder(h=board_hole_zlen+3, r=board_hole_mount_radius-0.15);
+            
+            translate([case_cover_xlen - edge_xwidth - board_hole_mount_radius, edge_xwidth + board_hole_mount_radius, case_cover_zlen+board_hole_zlen*1.7-2.0]) cylinder(h=board_hole_zlen/2.0, r1=board_hole_mount_radius-0.05, r2=board_hole_mount_radius-0.15);
+            translate([case_cover_xlen - edge_xwidth - board_hole_mount_radius, edge_xwidth + board_hole_mount_radius, case_cover_zlen+board_hole_zlen*1.2-2.0]) cylinder(h=board_hole_zlen/2.0, r2=board_hole_mount_radius-0.05, r1=board_hole_mount_radius-0.15);
         };
       
       //translate([edge_xwidth, edge_xwidth, edge_zwidth+0.1]) cube([case_cover_xlen - 2* edge_xwidth, case_cover_ylen - 2 * edge_xwidth, case_cover_zlen - edge_zwidth]);
