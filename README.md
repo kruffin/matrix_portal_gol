@@ -41,21 +41,13 @@ If you just want the CircuitPython GOL then all you need to do is drag the code.
 
 For the Arduino code, you need to do a few things (assuming a Matrix Portal as the microcontroller):
 
-1. Update the ESP32 firmware so Wifi will work.
-2. Get the Arduino IDE.
-3. Add some libraries to the IDE via the Library Manager.
-  * Adafruit Protomatter 1.4.1 - install all dependencies.
-  * WifiNINA - Add Zip from: https://github.com/adafruit/WiFiNINA/archive/master.zip
-  * Adafruit SleepyDog 1.6.1
-  * ~~NTPClient 3.2.1 - https://github.com/arduino-libraries/NTPClient~~
-  * Time 1.6.1 - by Michael Margolis
-4. Add the Adafruit boards via Preferences -> Additional Boards Manager URLs : https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
-  * Reference page for steps: https://learn.adafruit.com/adafruit-matrixportal-m4/arduino-ide-setup
-5. Add the board via the Boards Manager.
-  * Adafruit SAMD Boards - 1.7.10
-  * Arduino SAMD Boards
-6. Create a secrets.h file with a couple of entries (allows you to default some wifi credentials if you want).
-7. Flash the code.
+1. Update the ESP32 firmware so Wifi will work (Needs at least version 1.5.0).
+2. Get the Arduino CLI.
+3. Run `make setup` from the ardiuno folder.
+4. Run `make build`.
+5. (Optional: check if your board is connected to /dev/ttyACM0) Run `make check-board`. If you see /dev/ttyACM0 then all is good, otherwise, find where your board is connected and edit the makefile `PORT=/dev/ttyACM0` section at the top to point to yours.
+6. Run `make upload` to flash the code.
+7. (Optional) Check the serial output if it doesn't start showing the time with `make monitor`.
 
 Once it's running. Compile the `create_config.cpp` file in the config folder. Then run it from the commandline and pass it the parameters you want different from defaults; at a minumum the wifi user and pass are needed. After you get those parameters, funnel it to the display through the USB connection.
 

@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 int Ntp::OFFSET_HOURS = -4; // minus 5 for DST in EST
-const char Ntp::ntpServerName[] = "pool.ntp.org";
+const char Ntp::ntpServerName[] = "at.pool.ntp.org";
 Ntp *Ntp::instance = NULL;
 
 Ntp::Ntp(char *wifiSsid, char *wifiPass, IPAddress *timeServer) {
