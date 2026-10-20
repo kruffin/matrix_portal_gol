@@ -11,9 +11,13 @@ setup:
 	arduino-cli --config-file ${ARDUINO_CONFIG_FILE} lib install "Adafruit SleepyDog Library"@1.8.4
 	arduino-cli --config-file ${ARDUINO_CONFIG_FILE} lib install "Time"@1.6.1
 	arduino-cli --config-file ${ARDUINO_CONFIG_FILE} lib install "WiFiNINA"@1.8.14
+# 	arduino-cli --config-file ${ARDUINO_CONFIG_FILE} lib install "WiFiNINA_-_Adafruit_Fork"@1.6.1
+
+#   arduino-cli --config-file ${ARDUINO_CONFIG_FILE} lib install "WiFiNINA_Generic"@1.8.15-1
+# "WiFiNINA"@1.8.14
 
 build:
-	arduino-cli --config-file ${ARDUINO_CONFIG_FILE} compile --fqbn ${FQBN} arduino.ino
+	arduino-cli --config-file ${ARDUINO_CONFIG_FILE} compile --clean --fqbn ${FQBN} arduino.ino
 
 upload:
 	arduino-cli --config-file ${ARDUINO_CONFIG_FILE} upload -p ${PORT} --fqbn ${FQBN} arduino.ino
@@ -26,3 +30,9 @@ print-config:
 
 check-board:
 	arduino-cli --config-file ${ARDUINO_CONFIG_FILE} board list
+
+search:
+	arduino-cli --config-file ${ARDUINO_CONFIG_FILE} lib search $(filter-out $@, $(MAKECMDGOALS))
+
+%:
+	@:

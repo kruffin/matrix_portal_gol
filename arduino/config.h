@@ -37,4 +37,5 @@ class Config {
     static const char config_file_name[];
     static bool is_initialized;
     static bool init();
+    static void trim_spaces(char *text, unsigned int max_length);
 };

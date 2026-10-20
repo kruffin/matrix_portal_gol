@@ -90,6 +90,9 @@ configuration Config::read_config() {
       ++i;
     }
 
+    Config::trim_spaces(toRet.wifiName, 32);
+    Config::trim_spaces(toRet.wifiPass, 32);
+
     return toRet;
   }
 
@@ -104,6 +107,16 @@ configuration Config::read_config() {
     "129.6.15.28"
   };
 };
+
+void Config::trim_spaces(char *text, unsigned int max_length) {
+
+  int cnt = 0;
+  while (isSpace(text[0])) {
+    if (cnt++ >= max_length) { break; }
+
+    memmove(&text[0], &text[1], max_length);
+  }
+}
 
 bool Config::write_config(configuration conf) {
   if (!Config::init()) {

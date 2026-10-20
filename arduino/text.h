@@ -33,7 +33,8 @@ public:
 
   static const unsigned char textHeight = 7;
   static const unsigned char textWidth = 3;
-  static const unsigned char numCharacters = 44;
+  static const unsigned char numCharacters = 45;
+  static const unsigned char asciiStartPoint = 45;
 private:
   // DEBT: Only care about 11 characters plus empty/space. Characters are 0-9 and :
   static const bool font[][Text::textHeight * Text::textWidth];

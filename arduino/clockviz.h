@@ -40,6 +40,8 @@ public:
   void set_credentials(char *ssid, char *password);
   void set_ntp_ip(char *ntpIp);
 
+  cell_color timeColor;
+
 private:
   int width;
   int height;
@@ -57,5 +59,4 @@ private:
   unsigned long dt;
   unsigned long lastTimePulled;
   unsigned long backOffTime;
-  cell_color timeColor;
 };

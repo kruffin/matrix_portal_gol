@@ -54,6 +54,7 @@ unsigned char NUM_COLORS = 8;
 int GOL_FPS = 15;
 unsigned long SIM_TIME = 30L * 1000L;
 unsigned long gmt_offset_changed_time = 0L;
+unsigned long gmt_offset_display_time = 0L;
 
 #define MAX_SPEED 10
 
@@ -91,6 +92,40 @@ btn_state buttonDown = {.state=HIGH, .lastState=HIGH, .lastDebounceTime=0, .debo
 #ifdef USE_NTP
 ClockViz clockViz = ClockViz(WIDTH, HEIGHT, NULL);
 #endif
+
+Viz* create_gol_viz() {
+  return new Gol(WIDTH, HEIGHT, NUM_COLORS - 1, GOL_FPS, SIM_TIME);
+}
+Viz* create_boid_viz() {
+  return new BoidViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
+}
+Viz* create_car_viz() {
+  return new CarViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
+}
+Viz* create_rain_viz() {
+  return new RainViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
+}
+Viz* create_sprite_viz() {
+  return new SpriteViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, AVAIL_SPRITES, random(1, NUM_SPRITES+1), 10, SIM_TIME);
+}
+
+// Function pointer arrays to hold the visualization creation order; simplifies picking the next viz.
+uint8_t vizIdx = 0;
+const uint8_t DAY_VIZ_SIZE = 5;
+Viz* (*dayViz[5])() = {
+  create_gol_viz,
+  create_boid_viz,
+  create_car_viz,
+  create_rain_viz,
+  create_sprite_viz,
+};
+
+const uint8_t NIGHT_VIZ_SIZE = 3;
+Viz* (*nightViz[3])() = {
+  create_boid_viz,
+  create_car_viz,
+  create_rain_viz,
+};
 
 void pick_palette_colors(cell_color *pal, const cell_color *avail_colors) {
 //  deque<cell_color> to_pick;
@@ -150,6 +185,11 @@ bool is_button_pressed(btn_state *btn) {
   return (changed && (s == HIGH));
 }
 
+uint8_t wrapi8(uint8_t v, uint8_t min, uint8_t max) {
+  const uint8_t range = max - min;
+  return ((v - min) % range + range) % range + min;
+}
+
 configuration conf;
 bool is_clock_inited = false;
 
@@ -194,8 +234,9 @@ void setup() {
   Serial.println("clock viz init done.");
 #endif
 
-  game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1, GOL_FPS, SIM_TIME);
-//  game = new BoidViz(WIDTH, HEIGHT, 5, NUM_COLORS - 1);
+  game = (*dayViz[vizIdx])();
+  // game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1, GOL_FPS, SIM_TIME);
+
   Serial.println("viz randomize start");
   game->randomize();
   Serial.println("viz randomize done.");
@@ -207,62 +248,40 @@ unsigned long loopTime = millis();
 void loop() {
 #ifdef USE_NTP
   clockViz.update(0);
-#endif
 
   if (is_button_pressed(&buttonUp)) {
     Ntp::OFFSET_HOURS += 1;
+    gmt_offset_display_time = millis();
     if (Ntp::OFFSET_HOURS != conf.gmtOffset) {
       gmt_offset_changed_time = millis();
-      Serial.println("GMT offset changed +1.");
+      char buff[64];
+      sprintf(buff, "GMT offset changed +1 => %d.", Ntp::OFFSET_HOURS);
+      Serial.println(buff);
     } else {
       gmt_offset_changed_time = 0L;
     }
   } else if (is_button_pressed(&buttonDown)) {
     Ntp::OFFSET_HOURS -= 1;
+    gmt_offset_display_time = millis();
     if (Ntp::OFFSET_HOURS != conf.gmtOffset) {
       gmt_offset_changed_time = millis();
-      Serial.println("GMT offset changed -1.");
+      char buff[64];
+      sprintf(buff, "GMT offset changed -1 => %d.", Ntp::OFFSET_HOURS);
+      Serial.println(buff);
     } else {
       gmt_offset_changed_time = 0L;
     }
   }
-  
+#endif
+
   if (game->isFinished()) {
-    switch (game->getType()) {
-      case TYPE_GOL:
-        delete game;
-        game = new BoidViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
-        break;
-      case TYPE_BOID:
-        delete game;
-        game = new CarViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
-        break;
-      case TYPE_CAR:
-        delete game;
-        if (clockViz.isNight()) {
-          // Skip the GOL since it's too bright at night
-          game = new RainViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
-        } else {
-          game = new SpriteViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, AVAIL_SPRITES, random(1, NUM_SPRITES+1), 10, SIM_TIME);
-        }
-        break;
-      case TYPE_SPRITE:
-        delete game;
-        game = new RainViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
-        break;
-      case TYPE_RAIN:
-        delete game;
-        if (clockViz.isNight()) {
-          // Skip the GOL since it's too bright at night
-          game = new BoidViz(WIDTH, HEIGHT, MAX_SPEED, NUM_COLORS - 1, SIM_TIME);
-        } else {
-          game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1, GOL_FPS, SIM_TIME);
-        }
-        break;
-      default:
-        delete game;
-        game = new Gol(WIDTH, HEIGHT, NUM_COLORS - 1, GOL_FPS, SIM_TIME);
-        break;
+    delete game;
+    if (clockViz.isNight()) {
+      vizIdx = wrapi8(vizIdx + 1, 0, NIGHT_VIZ_SIZE);
+      game = (*nightViz[vizIdx])();
+    } else {
+      vizIdx = wrapi8(vizIdx + 1, 0, DAY_VIZ_SIZE);
+      game = (*dayViz[vizIdx])();
     }
 
     game->randomize();
@@ -276,6 +295,17 @@ void loop() {
   game->draw(&matrix, palette);
 #ifdef USE_NTP
   clockViz.draw(&matrix, palette);
+
+  // Draw the time offset if changed recently
+  if (millis() - gmt_offset_display_time < 2000L) {
+    Text t = Text();
+    char buff[16];
+    sprintf(buff, "%02.d", Ntp::OFFSET_HOURS);
+    t.value = String(buff);
+    int x = WIDTH - Text::textWidth * 3;
+    int y = HEIGHT - Text::textHeight - 1;
+    t.draw(x,y, &matrix, matrix.color565(clockViz.timeColor.red, clockViz.timeColor.green, clockViz.timeColor.blue));
+  }
 #endif
   matrix.show();
   unsigned long t = millis();

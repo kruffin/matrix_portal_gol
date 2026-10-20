@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <SPI.h>
+// #include <WiFiNINA_Generic.h>
 #include <WiFiNINA.h>
+
 #include <WiFiUdp.h>
 //#include <NTPClient.h>
 #include <TimeLib.h>

@@ -85,6 +85,32 @@ bool Ntp::init() {
           (char*)"WL_AP_FAILED"
       };
       Serial.println(codes[s]);
+
+      Serial.print("Firmware version: ");
+      Serial.println(firmware);
+
+      int networkCnt = WiFi.scanNetworks();
+      Serial.print("Found networks: ");
+      for (int idx = 0; idx < networkCnt; idx++) {
+        Serial.print("[");
+        Serial.print(WiFi.SSID(idx));
+        uint8_t encryptType = WiFi.encryptionType(idx);
+        char* codes[8] = {
+          (char*)"AUTH_MODE_INVALID",
+          (char*)"AUTH_MODE_AUTO",
+          (char*)"AUTH_MODE_OPEN_SYSTEM",
+          (char*)"AUTH_MODE_SHARED_KEY",
+          (char*)"AUTH_MODE_WPA",
+          (char*)"AUTH_MODE_WPA2",
+          (char*)"AUTH_MODE_WPA_PSK",
+          (char*)"AUTH_MODE_WPA2_PSK"
+        };
+        Serial.print("|");
+        Serial.print(codes[encryptType]);
+        Serial.print("] ");
+      }
+      Serial.println("");
+
       delay(5000);
       s = WiFi.begin(this->wifiSsid, this->wifiPass);
       tries++;
@@ -267,6 +293,10 @@ time_t Ntp::getNtpTime()
   Serial.print(": ");
   Serial.println(ntpServerIP);
   this->sendNTPpacket(ntpServerIP);
+
+  time_t times[3];
+  int timeCnt = 0;
+
   beginWait = millis();
   while (millis() - beginWait < 1500) {
     int size = udpProto.parsePacket();
@@ -274,14 +304,45 @@ time_t Ntp::getNtpTime()
       Serial.print(millis());
       Serial.println(": Receive NTP Response");
       udpProto.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
+      // udpProto.flush();
       unsigned long secsSince1900;
       // convert four bytes starting at location 40 to a long integer
       secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
       secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
       secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
       secsSince1900 |= (unsigned long)packetBuffer[43];
-      return secsSince1900 - 2208988800UL;// + timeZone * SECS_PER_HOUR;
+
+      // Take three time readings and pick the two close to each other.
+      // HACK: Rethink this (only one entry received).
+      times[timeCnt++] = secsSince1900 - 2208988800UL;
+      if (timeCnt >= 3) {
+        if (abs(times[0] - times[1]) <= 5) {
+          return (times[0] + times[1]) / 2;
+        } else if (abs(times[0] - times[2]) <= 5) {
+          return (times[0] + times[2]) / 2;
+        } else if (abs(times[1] - times[2]) <= 5) {
+          return (times[1] + times[2]) / 2;
+        }
+        Serial.print("NTP responses are in disagreement: ");
+        Serial.print(times[0]);
+        Serial.print(", ");
+        Serial.print(times[1]);
+        Serial.print(", ");
+        Serial.println(times[2]);
+        break;
+      } else {
+        char buff[64];
+        sprintf(buff, "%d: Time: %d", millis(), times[timeCnt-1]);
+        Serial.println(buff);
+      }
+      // return secsSince1900 - 2208988800UL;// + timeZone * SECS_PER_HOUR;
     }
+  }
+  if (timeCnt > 0 && timeCnt < 3) {
+    char buff[64];
+    sprintf(buff, "%d: Not enough times received: %d/3; picking first: %d.", millis(), timeCnt, times[0]);
+    Serial.println(buff);
+    return times[0];
   }
   Serial.print(millis());
   Serial.println(": No NTP Response :-(");
